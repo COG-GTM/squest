@@ -24,7 +24,8 @@ npm install            # required: static assets (adminlte, bootstrap-select, fo
 # 3. DB + static + seed data
 poetry run python manage.py migrate
 poetry run python manage.py collectstatic --noinput
-poetry run python manage.py insert_default_data     # creates admin/admin + 7 demo users + "Squest user" role
+poetry run python manage.py insert_default_data     # creates the admin/admin superuser from default_data.yml
+                                                    # (the "Squest user" role comes from the post_migrate hook in profiles/apps.py)
 
 # 4. Run (each in its own background process, log to a file)
 IS_DEV_SERVER=True poetry run python manage.py runserver 0.0.0.0:8000
@@ -35,7 +36,7 @@ poetry run celery -A service_catalog beat -l INFO
 App is at http://localhost:8000/ (redirects to `/accounts/login/?next=/ui/`).
 **Login: `admin` / `admin`** (defined in `default_data.yml`).
 `IS_DEV_SERVER=True` renders a yellow "DEV SERVER" banner — handy proof in screenshots that you are
-on the local build; the footer also shows the version, e.g. `v2.8.4 - d5cb2f`.
+on the local build; the footer also shows the running version and commit.
 
 ## Seeding demo catalog data — blocked without AWX
 
@@ -43,7 +44,8 @@ on the local build; the footer also shows the version, e.g. `v2.8.4 - d5cb2f`.
 fails without them. Consequence: Service catalog / Requests / Instances / Tower server pages are
 empty, and you **cannot** test service ordering, job templates, approval workflows, or the
 request→instance lifecycle locally. If a task needs those, ask for `AWX_TOKEN` plus an AAP/AWX URL
-up front rather than discovering it mid-run.
+up front rather than discovering it mid-run. It is also what creates the extra demo users
+(Elias, Nicolas, Anthony, Mathijs, Jeff, Mark) — `insert_default_data` alone only creates `admin`.
 
 ### Creating demo data through the UI instead (works with no external deps)
 
@@ -79,12 +81,13 @@ permission changes may take up to 60s to show in the menu.
 `/ui/profiles/user/` prints an `AttributeError: type object 'User' has no attribute
 'get_queryset_for_user'` traceback to the server log while still returning HTTP 200.
 `Squest/utils/squest_views.py` `get_queryset()` deliberately catches this and falls back to
-`self.model.objects.all()`. Pre-existing upstream behaviour as of 2.8.4.
+`self.model.objects.all()`, so the page still works. Pre-existing upstream behaviour.
 
 ## Security caution when sharing logs
 
-Squest's settings module dumps the whole process environment at startup, so the runserver log
-contains **plaintext values of every env var**, including any unrelated session secrets. Never
+When `DEBUG` is on (the default locally), `Squest/settings.py` runs `print(os.environ)` at startup,
+so the runserver log contains **plaintext values of every env var**, including any unrelated session
+secrets. Set `DEBUG=False` to suppress it. Never
 attach or paste the raw django log; grep it for the specific lines you need
 (`grep -E '" 5[0-9]{2} |Traceback|GET /static/.*" 4' <logfile>`).
 
