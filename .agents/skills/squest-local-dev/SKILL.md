@@ -81,7 +81,9 @@ permission changes may take up to 60s to show in the menu.
 `/ui/profiles/user/` prints an `AttributeError: type object 'User' has no attribute
 'get_queryset_for_user'` traceback to the server log while still returning HTTP 200.
 `Squest/utils/squest_views.py` `get_queryset()` deliberately catches this and falls back to
-`self.model.objects.all()`, so the page still works. Pre-existing upstream behaviour.
+`self.model.objects.all()`, so the page still works. Pre-existing upstream behaviour. Caveat: that
+fallback lists all users unscoped, so if a task concerns per-user visibility on this page, treat it
+as in scope rather than noise.
 
 ## Security caution when sharing logs
 
