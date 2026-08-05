@@ -108,7 +108,8 @@ def _table_row(page: Page, text: str):
             next_link.click()
         _wait_for_list_settled(page)
         row = helper_table_row(page, text)
-    raise AssertionError("pagination exceeded 500 pages while searching for a row")
+    else:
+        raise AssertionError("pagination exceeded 500 pages while searching for a row")
 
 
 def _expect_no_row(page: Page, list_entry: str, text: str) -> None:
@@ -125,7 +126,8 @@ def _expect_no_row(page: Page, list_entry: str, text: str) -> None:
             next_link.click()
         _wait_for_list_settled(page)
         row = helper_table_row(page, text)
-    raise AssertionError("pagination exceeded 500 pages while checking for a row")
+    else:
+        raise AssertionError("pagination exceeded 500 pages while checking for a row")
 
 
 def _delete_row(page: Page, row_text: str) -> None:
