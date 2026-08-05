@@ -14,9 +14,7 @@
                     </h5>
                 </div>
 
-                <div id="doc_{{ doc.id }}"
-                     class="collapse {% if  expanded != False %}show{% endif %}"
-                     data-bs-parent="#accordion_docs">
+                <div id="doc_{{ doc.id }}" class="collapse {% if expanded != False %}show{% endif %}">
                     <div class="card-body p-0">
                         <div class="martor-preview">
                             {{ doc.content | safe_markdown }}

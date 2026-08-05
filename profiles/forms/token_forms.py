@@ -12,5 +12,8 @@ class TokenForm(SquestModelForm):
 
     def __init__(self, *args, **kwargs):
         super(TokenForm, self).__init__(*args, **kwargs)
-        min_date = timezone.now().astimezone().strftime("%Y-%m-%dT%H:%M")
-        self.fields['expires'].widget = NativeDateTimeInput(attrs={'min': min_date})
+        widget_attrs = {}
+        if self.instance.pk is None:
+            min_date = timezone.now().astimezone().strftime("%Y-%m-%dT%H:%M")
+            widget_attrs['min'] = min_date
+        self.fields['expires'].widget = NativeDateTimeInput(attrs=widget_attrs)

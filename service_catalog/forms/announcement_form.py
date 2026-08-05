@@ -11,9 +11,12 @@ class AnnouncementForm(SquestModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super(AnnouncementForm, self).__init__(*args, **kwargs)
-        min_date = timezone.now().astimezone().strftime("%Y-%m-%dT00:00")
-        self.fields['date_start'].widget = NativeDateTimeInput(attrs={'min': min_date})
-        self.fields['date_stop'].widget = NativeDateTimeInput(attrs={'min': min_date})
+        widget_attrs = {}
+        if self.instance.pk is None:
+            min_date = timezone.now().astimezone().strftime("%Y-%m-%dT00:00")
+            widget_attrs['min'] = min_date
+        self.fields['date_start'].widget = NativeDateTimeInput(attrs=widget_attrs)
+        self.fields['date_stop'].widget = NativeDateTimeInput(attrs=widget_attrs)
         now = timezone.now().astimezone().strftime("%Y-%m-%d %H:%M")
         tz_name = timezone.get_current_timezone()
         help_text = f"Time Zone is {tz_name} ({now})"
