@@ -141,6 +141,7 @@ def _revoke_user(page, scope_url, username):
     # an org/team page keeps its users behind a tab, next to panes that are in the DOM as well; the
     # global scope page has no tabs at all and renders its users table directly
     tabbed = page.locator("#tabs").count() == 1
+    users_table = page.locator("#users table" if tabbed else "table").first
     row = _tab_rows(page, "users", username) if tabbed else table_row(page, username)
     try:
         if tabbed:
@@ -148,7 +149,11 @@ def _revoke_user(page, scope_url, username):
         # waited for rather than counted: a snapshot cannot tell "revoked" from "not rendered yet"
         row.first.wait_for(state="attached", timeout=5000)
     except PlaywrightTimeoutError:
-        return  # the scope does not hold the user, which is what the caller wants
+        # "no such user" is only an answer once the table that would hold them is on the page:
+        # a page that never rendered must not be read as a scope the caller has nothing to do on
+        expect(users_table).to_be_attached()
+        expect(row).to_have_count(0)
+        return
     row.locator("a.btn-danger").first.click()
     page.wait_for_load_state()
     submit_form(page, "Confirm")
