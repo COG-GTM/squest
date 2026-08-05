@@ -108,3 +108,18 @@ TextBefore ![Single picture on a line with text before and after](/notmedia/doc_
         context = {"random_key": {"name": "test"}}
         when_string = "instance.name == 'test'"
         self.assertFalse(AnsibleWhen.when_render(context, when_string))
+
+    def test_when_render_does_not_allow_code_execution(self):
+        context = {"instance": {"name": "test"}}
+        payloads = [
+            "lipsum.__globals__.os.popen('id').read() or True",
+            "cycler.__init__.__globals__.os.popen('id').read() or True",
+            "''.__class__.__mro__[1].__subclasses__() or True",
+            "instance.__class__.__init__.__globals__ or True",
+            "instance.update({'name': 'hacked'}) or True",
+            "self.__init__.__globals__ or True",
+        ]
+        for when_string in payloads:
+            with self.subTest(when_string=when_string):
+                self.assertFalse(AnsibleWhen.when_render(context, when_string))
+        self.assertEqual(context, {"instance": {"name": "test"}})
