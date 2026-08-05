@@ -6,6 +6,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <script>
+        (function () {
+            const theme = "{% if request.user.is_authenticated and request.user.profile.theme == 'dark' %}dark{% else %}light{% endif %}";
+            localStorage.setItem('lte-theme', theme);
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.style.colorScheme = theme;
+        })();
+    </script>
+
     <!-- Jquery -->
     <script src="{% static 'jquery/dist/jquery.min.js' %}"></script>
     <script src="{% static 'jquery-ui-dist/jquery-ui.js' %}"></script>
