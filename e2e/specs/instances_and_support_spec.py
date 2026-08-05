@@ -46,12 +46,18 @@ def _apply_filter(page: Page, field: str, value: str) -> None:
         if filter_field.is_visible():
             break
         if page.locator("body.control-sidebar-open, body.control-sidebar-slide-open").count():
-            expect(filter_field).to_be_visible(timeout=1000)
-            break
+            try:
+                expect(filter_field).to_be_visible(timeout=1000)
+                break
+            except AssertionError:
+                continue
         opener.click()
-        expect(page.locator("body")).to_have_class(
-            re.compile(r"(^|\s)control-sidebar-(?:open|slide-open)(\s|$)"), timeout=1000
-        )
+        try:
+            expect(page.locator("body")).to_have_class(
+                re.compile(r"(^|\s)control-sidebar-(?:open|slide-open)(\s|$)"), timeout=1000
+            )
+        except AssertionError:
+            continue
     expect(filter_field).to_be_visible(timeout=1000)
     filter_field.fill(value)
     with page.expect_navigation():
@@ -298,13 +304,14 @@ def test_admin_deletes_an_instance_through_the_confirmation_page(admin_page):
 
 
 def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
-    first = _unique("e2e-bulk")
-    second = _unique("e2e-bulk")
+    token = uuid.uuid4().hex[:8]
+    first = f"e2e-bulk-{token}-a"
+    second = f"e2e-bulk-{token}-b"
     _order_new_instance(admin_page, first)
     _order_new_instance(admin_page, second)
 
     goto_sidebar_entry(admin_page, "Instances")
-    _apply_filter(admin_page, "name", "e2e-bulk-")
+    _apply_filter(admin_page, "name", f"e2e-bulk-{token}-")
     for name in [first, second]:
         row = _rows(admin_page, "instance_table", name)
         expect(row).to_have_count(1)
