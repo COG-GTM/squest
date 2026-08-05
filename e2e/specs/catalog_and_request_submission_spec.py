@@ -11,7 +11,7 @@ import re
 import uuid
 from urllib.parse import urlparse
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
 
 from e2e.helpers import (
     expect_table_contains,
@@ -22,6 +22,7 @@ from e2e.helpers import (
 )
 
 DEMO_JOB_TEMPLATE = "Deploy virtual machine (Demo AAP)"
+WIZARD_NAVIGATION_TIMEOUT_MS = 2_000
 
 
 def _unique(prefix: str) -> str:
@@ -57,7 +58,9 @@ def _pick(page: Page, field_name: str, label: str) -> None:
             None,
         )
         if selected_label is None:
-            page.select_option(f"select[name='{field_name}']", label=label, force=True)
+            raise AssertionError(
+                f"Select '{field_name}' did not offer '{label}'; options were: {option_texts}"
+            )
         else:
             options.filter(has_text=re.compile(rf"^\s*{re.escape(selected_label)}\s*$")).click()
     else:
@@ -70,8 +73,11 @@ def _option_labels(page: Page, field_name: str) -> list[str]:
 
 def _submit_wizard_step(page: Page) -> None:
     """The wizard template validates with an ``input``, and its only ``button`` goes back a step."""
-    page.locator("form input[type='submit']").click()
-    page.wait_for_load_state()
+    try:
+        with page.expect_navigation(timeout=WIZARD_NAVIGATION_TIMEOUT_MS):
+            page.locator("form input[type='submit']").click()
+    except PlaywrightTimeoutError:
+        pass
 
 
 def _fill_first_step(page: Page, instance_name: str, quota_scope: str) -> None:
@@ -142,6 +148,7 @@ def _add_create_operation(admin_page: Page, service_name: str, operation_name: s
     admin_page.fill("input[name='name']", operation_name)
     _pick(admin_page, "job_template", DEMO_JOB_TEMPLATE)
     submit_form(admin_page)
+    expect(admin_page.locator("body")).to_contain_text(operation_name)
 
 
 def _create_requestable_service(admin_page: Page) -> tuple[str, str, str]:
@@ -283,8 +290,7 @@ def test_a_request_of_another_scope_is_hidden_and_answers_403(scoped_user_page, 
 
 def test_admin_publishes_a_new_service_and_a_user_can_request_it(admin_page, scoped_user_page):
     """Portfolio, service and create operation created through the UI make the service requestable."""
-    portfolio_name, service_name, operation_name = _create_requestable_service(admin_page)
-    expect(admin_page.locator("body")).to_contain_text(operation_name)
+    portfolio_name, service_name, _ = _create_requestable_service(admin_page)
 
     goto_sidebar_entry(scoped_user_page, "Service catalog")
     _open_portfolio(scoped_user_page, portfolio_name)
