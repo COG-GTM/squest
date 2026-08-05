@@ -3,9 +3,9 @@
  #{{ target_request.id }} | Process
 {%  endblock %}
 {% block content %}
-    <div class="content-wrapper" style="min-height: 278px;">
+    <main class="app-main" style="min-height: 278px;">
         <!-- Content Header (Page header) -->
-        <div class="content-header">
+        <div class="app-content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
@@ -16,7 +16,7 @@
         </div>
         <!-- /.content-header -->
         <!-- Main content -->
-        <div class="content">
+        <div class="app-content">
             <div class="container-fluid">
                 <div class="card card-success">
                     <div class="card-header">
@@ -30,7 +30,7 @@
                         {% endif %}
                         <div class="row">
                             <div class="col-12 col-sm-4">
-                                <div class="info-box bg-light">
+                                <div class="info-box bg-body-secondary">
                                     <div class="info-box-content">
                                         <span class="info-box-text text-center text-muted">Type</span>
                                         <span class="info-box-number text-center text-{{ target_request.operation.type|map_operation_type }} mb-0">{{ target_request.operation.type }}</span>
@@ -38,7 +38,7 @@
                                 </div>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <div class="info-box bg-light">
+                                <div class="info-box bg-body-secondary">
                                     <div class="info-box-content">
                                         <span class="info-box-text text-center text-muted">Job template</span>
                                         <span class="info-box-number text-center text-muted mb-0">{{ target_request.operation.job_template.name }}</span>
@@ -46,7 +46,7 @@
                                 </div>
                             </div>
                             <div class="col-12 col-sm-4">
-                                <div class="info-box bg-light">
+                                <div class="info-box bg-body-secondary">
                                     <div class="info-box-content">
                                         <span class="info-box-text text-center text-muted">Instance</span>
                                         <span class="info-box-number text-center text-muted mb-0">{{ target_request.instance.name }}</span>
@@ -55,7 +55,7 @@
                             </div>
                         </div>
                         {% if target_request.full_survey %}
-                            <div class="card bg-light">
+                            <div class="card bg-body-secondary">
                                 <div class="card-header">
                                     <h3 class="card-title">Extra vars</h3>
                                 </div>
@@ -86,6 +86,5 @@
                 </div>
             </div><!-- end container fluid -->
         </div>
-    </div>
-    </div>
+    </main>
 {% endblock %}
