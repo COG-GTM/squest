@@ -13,7 +13,7 @@ import re
 import uuid
 
 import pytest
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
 from e2e.helpers import NAV_MAP, expect_table_contains, expect_table_does_not_contain, goto_sidebar_entry, \
     submit_form, table_row, visible_sidebar_entries
@@ -72,7 +72,11 @@ def _filter_list(page, field_name, value):
         if field.is_visible():
             break
         _header_button(page, "sliders-h").click()
-        page.wait_for_timeout(500)
+        try:
+            # long enough that a slow open is waited out rather than toggled shut again
+            field.wait_for(state="visible", timeout=5000)
+        except PlaywrightTimeoutError:
+            continue
     field.fill(value)
     with page.expect_navigation():
         aside.get_by_role("button", name="Apply").click()
@@ -99,6 +103,17 @@ def _delete_from_its_page(page, url):
     assert page.goto(url).status == 404, f"{url} was not deleted"
 
 
+def _delete_all(page, urls):
+    """Deletes every object a factory created, reporting the survivors rather than the first one."""
+    survivors = []
+    for url in urls:
+        try:
+            _delete_from_its_page(page, url)
+        except (AssertionError, PlaywrightTimeoutError) as error:
+            survivors.append(f"{url} ({error})")
+    assert not survivors, "objects left in the session database: " + ", ".join(survivors)
+
+
 def _tab_rows(page, tab_id, text):
     """The rows of one tab pane: every pane of a detail page is in the DOM, open or not."""
     return page.locator(f"#{tab_id} table tbody tr").filter(has_text=text)
@@ -120,6 +135,7 @@ def _revoke_user(page, scope_url, username):
     # only exists once the scope holds a user
     if page.locator("#tabs").get_by_role("link", name="Users", exact=True).count() == 1:
         _open_tab(page, "Users")
+    page.locator("table tbody").first.wait_for(state="attached")
     row = table_row(page, username)
     if row.count() == 0:
         return
@@ -145,8 +161,7 @@ def organization_factory(admin_page):
         return name, admin_page.url
 
     yield _create
-    for url in created:
-        _delete_from_its_page(admin_page, url)
+    _delete_all(admin_page, created)
 
 
 @pytest.fixture
@@ -167,8 +182,7 @@ def role_factory(admin_page):
         return name, admin_page.url
 
     yield _create
-    for url in created:
-        _delete_from_its_page(admin_page, url)
+    _delete_all(admin_page, created)
 
 
 def test_admin_creates_an_organization_and_reaches_its_detail_page(admin_page, organization_factory):
@@ -380,6 +394,7 @@ def test_admin_changes_the_default_permissions_of_the_global_scope(admin_page):
         # the global scope is shared with every later spec, and picking a value toggles it: the
         # permission is only clicked back off when it really was added
         goto_sidebar_entry(admin_page, "Default permissions")
+        admin_page.locator("#owner-permissions table tbody tr").first.wait_for(state="attached")
         if _tab_rows(admin_page, "owner-permissions", added_permission).count() == 1:
             _header_button(admin_page, "pencil-alt").click()
             _pick(admin_page, "owner_permissions", added_permission)
@@ -403,11 +418,13 @@ def test_admin_browses_the_user_list_and_a_user_detail_page(admin_page):
 
 def test_scoped_user_cannot_reach_the_access_administration_pages(scoped_user_page, base_url):
     """bob holds the 'Squest user' role on his own scopes only: no user, role or global scope page."""
+    # read the sidebar once, off a normal page: a 403 answer renders no sidebar to look at
+    entries = visible_sidebar_entries(scoped_user_page)
     for name, path in [("Users", NAV_MAP["Access"]["Users"]),
                        ("Role", NAV_MAP["Administration"]["Role"]),
                        ("Permission", NAV_MAP["Administration"]["Permission"]),
                        ("Global scope", NAV_MAP["Access"]["Global scope"])]:
-        assert name not in visible_sidebar_entries(scoped_user_page), f"'{name}' must not be in bob's sidebar"
+        assert name not in entries, f"'{name}' must not be in bob's sidebar"
         assert scoped_user_page.goto(f"{base_url}{path}").status == 403, f"'{name}' did not answer 403 for bob"
 
 
