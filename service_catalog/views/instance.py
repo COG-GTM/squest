@@ -127,7 +127,7 @@ class InstanceDetailView(SquestDetailView):
         if self.request.user.has_perm("service_catalog.view_support", self.object):
             context['supports_table'] = SupportTable(
                 self.object.supports.distinct(),
-                hide_fields=["instance"],
+                hide_fields=["instance", "selection"],
                 prefix="support-"
             )
             config.configure(context['supports_table'])

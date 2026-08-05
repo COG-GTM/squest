@@ -88,7 +88,7 @@ def generate_sidebar(user):
                 'permission_required': 'service_catalog.list_support',
                 'active': [
                     "support_list", "support_create", "support_details", "support_close", "support_reopen",
-                    "supportmessage_edit", "support_delete"
+                    "support_bulk_close", "support_bulk_reopen", "supportmessage_edit", "support_delete"
                 ]
             },
             {

@@ -1,5 +1,6 @@
 
 from service_catalog.models import SupportMessage
+from service_catalog.models.support import SupportState
 from tests.test_service_catalog.base_test_request import BaseTestRequest
 from tests.permission_endpoint import TestingGetContextView, TestingPostContextView, TestPermissionEndpoint
 
@@ -96,6 +97,40 @@ class TestServiceCatalogSupportPermissionsViews(BaseTestRequest, TestPermissionE
                 url='service_catalog:support_delete',
                 perm_str_list=['service_catalog.delete_support'],
                 url_kwargs={'instance_id': self.support_test.instance.id, 'pk': self.support_test.id}
+            ),
+        ]
+        self.run_permissions_tests(testing_view_list)
+
+    def test_support_bulk_close_views(self):
+        self.support_test.state = SupportState.OPENED
+        self.support_test.save()
+        testing_view_list = [
+            TestingGetContextView(
+                url='service_catalog:support_bulk_close',
+                perm_str_list=['service_catalog.close_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+            TestingPostContextView(
+                url='service_catalog:support_bulk_close',
+                perm_str_list=['service_catalog.close_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+        ]
+        self.run_permissions_tests(testing_view_list)
+
+    def test_support_bulk_reopen_views(self):
+        self.support_test.state = SupportState.CLOSED
+        self.support_test.save()
+        testing_view_list = [
+            TestingGetContextView(
+                url='service_catalog:support_bulk_reopen',
+                perm_str_list=['service_catalog.reopen_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+            TestingPostContextView(
+                url='service_catalog:support_bulk_reopen',
+                perm_str_list=['service_catalog.reopen_support'],
+                data={'selection': [self.support_test.id]},
             ),
         ]
         self.run_permissions_tests(testing_view_list)
