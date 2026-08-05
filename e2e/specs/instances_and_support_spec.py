@@ -54,7 +54,8 @@ def _apply_filter(page: Page, field: str, value: str) -> None:
         )
     expect(filter_field).to_be_visible(timeout=1000)
     filter_field.fill(value)
-    page.get_by_role("button", name="Apply").click()
+    with page.expect_navigation():
+        page.get_by_role("button", name="Apply").click()
     page.wait_for_load_state()
 
 
@@ -100,7 +101,7 @@ def _order_new_instance(admin_page: Page, name: str) -> None:
     admin_page.locator(".card", has_text="Infrastructure").get_by_role("link", name="Open").first.click()
     admin_page.locator(".card", has_text="Provision a RHEL virtual machine").get_by_role(
         "link", name="Order").first.click()
-    if not re.search(r"/request/$", admin_page.url):
+    if re.search(r"/operation/request/$", admin_page.url):
         _rows(admin_page, "operation_table", "Create virtual machine").get_by_role("link").first.click()
 
     admin_page.fill("input[name='0-name']", name)
@@ -109,7 +110,7 @@ def _order_new_instance(admin_page: Page, name: str) -> None:
     admin_page.fill("input[name='1-vcpu']", "2")
     admin_page.fill("input[name='1-memory']", "8")
     admin_page.locator("input[type='submit']").click()
-    expect(admin_page).to_have_url(re.compile(r"/request/$"))
+    expect(admin_page).to_have_url(re.compile(r"/service-catalog/request/$"))
 
 
 def _open_new_support(page: Page, instance_name: str, title: str) -> None:
@@ -204,7 +205,7 @@ def test_scoped_user_requests_a_resize_on_the_instance_they_own(scoped_user_page
     submit_form(scoped_user_page, "Request the operation")
 
     # Squest lands the requester on their request list, with the new request on it
-    expect(scoped_user_page).to_have_url(re.compile(r"/request/$"))
+    expect(scoped_user_page).to_have_url(re.compile(r"/service-catalog/request/$"))
     expect(_rows(scoped_user_page, "request_table", "Resize virtual machine").first).to_contain_text("batch-worker-01")
 
     _open_instance(scoped_user_page, "batch-worker-01")
@@ -252,6 +253,14 @@ def test_admin_renames_an_instance(admin_page):
     expect(_instance_rows(admin_page, renamed)).to_have_count(1)
     expect(_instance_rows(admin_page, name)).to_have_count(0)
 
+    _open_instance(admin_page, renamed)
+    admin_page.locator("a.btn-danger[href$='/delete/']").first.click()
+    expect(admin_page.locator(".card-title").first).to_contain_text(f"Confirm deletion of {renamed}")
+    admin_page.get_by_role("button", name="Confirm").click()
+    admin_page.wait_for_load_state()
+    expect(admin_page).to_have_url(re.compile(r"/instance/$"))
+    expect(_instance_rows(admin_page, renamed)).to_have_count(0)
+
 
 def test_archiving_is_refused_on_an_instance_that_was_never_deleted(admin_page):
     """``Instance.archive`` only leaves the DELETED state, so an AVAILABLE instance offers no button."""
@@ -293,9 +302,10 @@ def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
 
     goto_sidebar_entry(admin_page, "Instances")
     _apply_filter(admin_page, "name", "e2e-bulk-")
-    expect(_rows(admin_page, "instance_table", "e2e-bulk-")).to_have_count(2)
     for name in [first, second]:
-        _rows(admin_page, "instance_table", name).locator("input[name='selection']").check()
+        row = _rows(admin_page, "instance_table", name)
+        expect(row).to_have_count(1)
+        row.locator("input[name='selection']").check()
     admin_page.get_by_role("button", name="Delete").click()
     admin_page.wait_for_load_state()
 
@@ -369,6 +379,7 @@ def test_admin_closes_and_reopens_a_support_ticket(scoped_user_page, admin_page)
     _open_new_support(scoped_user_page, "batch-worker-01", title)
     # the "Squest user" role holds no close_support permission: the owner is not offered the button
     _support_rows(scoped_user_page, title).get_by_role("link", name=re.compile(title)).click()
+    expect(scoped_user_page.get_by_title("state")).to_contain_text("OPENED")
     expect(scoped_user_page.get_by_role("link", name="Close")).to_have_count(0)
 
     _support_rows(admin_page, title).get_by_role("link", name=re.compile(title)).click()
