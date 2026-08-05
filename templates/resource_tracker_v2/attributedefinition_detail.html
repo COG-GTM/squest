@@ -21,11 +21,11 @@
                         <ul class="list-group list-group-unbordered">
                             <li class="list-group-item">
                                 <b>Description</b>
-                                <p class="float-right">{{ object.description }}</p>
+                                <p class="float-end">{{ object.description }}</p>
                             </li>
                             <li class="list-group-item">
                                 <b>Services</b>
-                                <span class="float-right">
+                                <span class="float-end">
                                     {% for service in object.services.distinct %}
                                         <span class="badge bg-primary">{{ service.name }}</span>
                                     {% endfor %}
@@ -42,7 +42,7 @@
                         <ul class="nav nav-pills squest-default-active" id="tabs">
                             {% if quotas %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#quotas" data-toggle="tab">Quotas</a>
+                                    <a class="nav-link" href="#quotas" data-bs-toggle="tab">Quotas</a>
                                 </li>
                             {% endif %}
                         </ul>
