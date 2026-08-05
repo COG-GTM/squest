@@ -75,9 +75,12 @@ def _submit_wizard_step(page: Page, allow_validation_block: bool = False) -> Non
     """The wizard template validates with an ``input``, and its only ``button`` goes back a step."""
     if allow_validation_block:
         before_url = page.url
+        submit_button = page.locator("form input[type='submit']").first
+        expect(submit_button).to_be_visible()
+        expect(submit_button).to_be_enabled()
         try:
             with page.expect_navigation(timeout=WIZARD_NAVIGATION_TIMEOUT_MS):
-                page.locator("form input[type='submit']").click()
+                submit_button.click()
         except PlaywrightTimeoutError:
             assert page.url == before_url, \
                 "The submit was expected to be blocked by browser validation"
