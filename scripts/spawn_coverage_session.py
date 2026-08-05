@@ -40,11 +40,15 @@ gate re-runs. Constraints:
 
 
 def required(name):
-    """Read a required variable, reporting an unconfigured repository instead of a bare KeyError."""
-    try:
-        return os.environ[name]
-    except KeyError:
+    """Read a required variable, reporting an unconfigured repository instead of an opaque API error.
+
+    Actions defines the variable as an empty string when the secret or variable does not exist, so
+    empty counts as unset.
+    """
+    value = os.environ.get(name, "").strip()
+    if not value:
         raise SystemExit(f"{name} is not set: the coverage backfill session cannot be created")
+    return value
 
 
 def set_output(name, value):

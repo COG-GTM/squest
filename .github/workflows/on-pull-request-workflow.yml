@@ -117,6 +117,7 @@ jobs:
 
       - name: Publish the patch coverage report
         if: always() && hashFiles('patch-coverage.md') != ''
+        continue-on-error: true  # best effort: the backfill session must not depend on the summary
         run: |
           cat patch-coverage.md >> "$GITHUB_STEP_SUMMARY"
 
