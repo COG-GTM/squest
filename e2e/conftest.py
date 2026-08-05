@@ -17,6 +17,7 @@ what keeps ``--video`` from cutting off the state a test asserts on.
 import contextlib
 import fcntl
 import os
+import re
 import tempfile
 import socket
 import subprocess
@@ -37,6 +38,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # the mariadb container grants squest_user on this database only, and the Django test runner recreates
 # it from scratch, so the end to end suite can own it without colliding with the dev database
 E2E_DB_DATABASE = os.environ.get("E2E_DB_DATABASE", "test_squest_db")
+# the name cannot be a placeholder in a DROP/CREATE DATABASE, so it is checked instead of quoted
+if not re.fullmatch(r"[A-Za-z0-9_$]+", E2E_DB_DATABASE):
+    raise RuntimeError(f"E2E_DB_DATABASE='{E2E_DB_DATABASE}' is not a plain database identifier, and the "
+                       f"harness interpolates it into a DROP DATABASE statement.")
 E2E_REUSE_DB = str_to_bool(os.environ.get("E2E_REUSE_DB", "False"))
 # Playwright's screencast is driven by page activity, so a test asserting on a page it did not touch
 # after loading it can end up with a video whose last frame is the login form. Off by default: this
@@ -205,7 +210,10 @@ def _database_lock(announce):
 def _database_exists(environment):
     with _mysql_connection(environment) as connection:
         cursor = connection.cursor()
-        cursor.execute("SHOW DATABASES LIKE %s", (E2E_DB_DATABASE,))
+        # not SHOW DATABASES LIKE: its pattern reads '_' as a wildcard, so 'test_squest_db' would also
+        # accept an unrelated 'testXsquestXdb' and let E2E_REUSE_DB run against an unseeded database
+        cursor.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s",
+                       (E2E_DB_DATABASE,))
         return cursor.fetchone() is not None
 
 

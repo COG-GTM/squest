@@ -55,6 +55,14 @@ machine waits for the first one instead of pulling the database out from under i
 at the same time, give them different `E2E_DB_DATABASE` values (the compose file only grants
 `squest_user` on `squest_db` and `test_squest_db`, so another name needs its own `GRANT`).
 
+The harness drops and creates that database over `MySQLdb`, so it needs the MariaDB stack of
+`dev.docker-compose.yml`: it does not work against the PostgreSQL one of `psql.docker-compose.yaml`.
+It also starts the server from an allow list of environment variables rather than inheriting the
+shell (Squest prints `os.environ` under `DEBUG`, and an unrelated secret must not end up in a log a
+CI job keeps), so a variable the suite is not told about — including `SECRET_KEY`, which falls back
+to the built-in development value — does not reach it. Add the key to `PASSTHROUGH_ENVIRONMENT_KEYS`
+in `e2e/conftest.py` if a spec needs one, and to `SECRET_ENVIRONMENT_KEYS` if it is a secret.
+
 ## Writing a spec
 
 * One file per flow family, `e2e/specs/<family>_spec.py`. `*_spec.py` keeps `manage.py test` from
