@@ -25,12 +25,16 @@ class SupportListView(SquestListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['html_button_path'] = ""
         if (
             self.request.user.has_perm("service_catalog.close_support")
             or self.request.user.has_perm("service_catalog.reopen_support")
         ):
             context['html_button_path'] = "service_catalog/buttons/support_bulk_action_buttons.html"
-            context['action_url'] = reverse("service_catalog:support_bulk_close")
+            if self.request.user.has_perm("service_catalog.close_support"):
+                context['action_url'] = reverse("service_catalog:support_bulk_close")
+            else:
+                context['action_url'] = reverse("service_catalog:support_bulk_reopen")
         return context
 
 
@@ -61,7 +65,8 @@ def _support_bulk_action(
     if skipped:
         messages.warning(request, f"{skipped} support(s) skipped because they are {skip_message}.")
     if not eligible:
-        messages.warning(request, "Empty selection.")
+        if not pks:
+            messages.warning(request, "Empty selection.")
         return redirect("service_catalog:support_list")
 
     context = {
