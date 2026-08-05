@@ -23,17 +23,17 @@
                     <div class="card-body">
                         <ul class="list-group list-group-unbordered mb-3">
                             <li class="list-group-item">
-                                <b>Name</b><span class="float-right">{{ object.name }}</span>
+                                <b>Name</b><span class="float-end">{{ object.name }}</span>
                             </li>
                         <li class="list-group-item">
-                                <b>Title</b><span class="float-right">{{ object.email_title }}</span>
+                                <b>Title</b><span class="float-end">{{ object.email_title }}</span>
                             </li>
                             {% if object.services.all %}
                                 <li class="list-group-item">
                                     <b>Services</b>
-                                    <span class="float-right">
+                                    <span class="float-end">
                                     {% for service in object.services.distinct %}
-                                        <span class="badge bg-light">{{ service.name }}</span>
+                                        <span class="badge text-bg-light">{{ service.name }}</span>
                                     {% endfor %}
                                 </span>
                                 </li>
@@ -41,9 +41,9 @@
                             {% if object.instance_states %}
                                 <li class="list-group-item">
                                     <b>Instance states</b>
-                                    <span class="float-right">
+                                    <span class="float-end">
                                     {% for state in object.instance_states %}
-                                        <span class="badge bg-light">{{ state | instance_state_integer_to_string }}</span>
+                                        <span class="badge text-bg-light">{{ state | instance_state_integer_to_string }}</span>
                                     {% endfor %}
                                     </span>
                                 </li>
@@ -51,9 +51,9 @@
                             {% if object.quota_scopes.all %}
                                 <li class="list-group-item">
                                     <b>Scopes</b>
-                                    <span class="float-right">
+                                    <span class="float-end">
                                     {% for scope in object.quota_scopes.distinct %}
-                                        <span class="badge bg-light">{{ scope.name }}</span>
+                                        <span class="badge text-bg-light">{{ scope.name }}</span>
                                     {% endfor %}
                                     </span>
                                 </li>

@@ -13,7 +13,7 @@
     {% include 'generics/buttons/delete_button.html' %}
 {% endblock %}
 {% block custom_links %}
-    <div class="float-right">
+    <div class="float-end">
         {% load custom_links %}
         <div class="btn-toolbar">
             {% custom_links request.user object %}
@@ -37,7 +37,7 @@
                         <ul class="list-group list-group-unbordered mb-3">
                             <li class="list-group-item">
                                 <b>ID</b>
-                                <strong class="float-right">{{ object.id }}</strong>
+                                <strong class="float-end">{{ object.id }}</strong>
                             </li>
 
                             {% if object.service %}
@@ -46,24 +46,24 @@
                                 {% has_perm request.user "service_catalog.change_service" object.service as can_edit_service %}
                                     {% if can_edit_service %}
                                         <a href="{% url 'service_catalog:service_edit' object.service.id %}"
-                                           class="float-right">{{ object.service.name }}</a>
+                                           class="float-end">{{ object.service.name }}</a>
                                     {% else %}
-                                        <a class="float-right">{{ object.service.name }}</a>
+                                        <a class="float-end">{{ object.service.name }}</a>
                                     {% endif %}
                             </li>
                             {% endif %}
                             <li class="list-group-item">
                                 <b>State</b> <strong
-                                    class="float-right text-{{ object.state |map_instance_state }}">{{ object.get_state_display }}</strong>
+                                    class="float-end text-{{ object.state |map_instance_state }}">{{ object.get_state_display }}</strong>
                             </li>
                             <li class="list-group-item">
                                 <b>Quota scope</b> <a href="{{ object.quota_scope.get_absolute_url }}"
-                                                      class="float-right">{{ object.quota_scope }}</a>
+                                                      class="float-end">{{ object.quota_scope }}</a>
                             </li>
                             <li class="list-group-item">
                                 <b>RBAC scope</b>
                                 {% for scope in object.get_scopes %}
-                                    <a class="float-right" href="{{ scope.get_absolute_url }}">
+                                    <a class="float-end" href="{{ scope.get_absolute_url }}">
                                         {{ scope }}
                                     </a> <br>
                                 {% endfor %}
@@ -71,7 +71,7 @@
                             {% if object.requester %}
                                 <li class="list-group-item">
                                     <b>Owner</b> <a href="{% url 'profiles:user_details' object.requester.id %}"
-                                                    class="float-right">{{ object.requester.username }}</a>
+                                                    class="float-end">{{ object.requester.username }}</a>
                                 </li>
                             {% endif %}
                             {% has_perm request.user "resource_tracker_v2.change_resource" object as can_change_resource %}
@@ -79,7 +79,7 @@
                                 <li class="list-group-item">
                                     <b>Resources</b>
                                     {% for resource in object.resources.all %}
-                                        <a class="float-right"
+                                        <a class="float-end"
                                            href="{% url 'resource_tracker_v2:resource_edit' resource.resource_group.id resource.id %}">
                                             {{ resource.name }}
                                         </a> <br>
@@ -96,22 +96,22 @@
                         <ul class="nav nav-pills squest-default-active" id="tabs">
                             {% if operations_table %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#operations" data-toggle="tab">Operations</a>
+                                    <a class="nav-link" href="#operations" data-bs-toggle="tab">Operations</a>
                                 </li>
                             {% endif %}
                             <li class="nav-item">
-                                <a class="nav-link" href="#support" data-toggle="tab">Support</a>
+                                <a class="nav-link" href="#support" data-bs-toggle="tab">Support</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#spec" data-toggle="tab">Specs</a>
+                                <a class="nav-link" href="#spec" data-bs-toggle="tab">Specs</a>
                             </li>
                             {% if requests_table %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#requests" data-toggle="tab">Requests</a>
+                                    <a class="nav-link" href="#requests" data-bs-toggle="tab">Requests</a>
                                 </li>
                             {% endif %}
                             <li class="nav-item">
-                                <a class="nav-link" href="#docs" data-toggle="tab">Docs</a>
+                                <a class="nav-link" href="#docs" data-bs-toggle="tab">Docs</a>
                             </li>
                         </ul>
                     </div>
