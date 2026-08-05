@@ -6,11 +6,8 @@ function showToast({title, body, class: toastClass = '', autohide = true, delay 
         document.body.appendChild(container);
     }
 
-    const normalizedClass = toastClass
-        .replace(/\bbg-(\S+)/g, 'text-bg-$1')
-        .replace(/\bmr-/g, 'me-');
     const toast = document.createElement('div');
-    toast.className = `toast border-0 ${normalizedClass}`;
+    toast.className = `toast border-0 ${toastClass}`;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
     toast.setAttribute('aria-atomic', 'true');
@@ -125,7 +122,7 @@ $(document).ready(function () {
                 //     body: 'Complete',
                 //     autohide: true,
                 //     delay: 3000,
-                //     class: 'bg-success me-3 my-3'
+                //     class: 'text-bg-success me-3 my-3'
                 // });
             }).fail((err) => {
                 showToast({
@@ -133,7 +130,7 @@ $(document).ready(function () {
                     body: 'Error',
                     autohide: true,
                     delay: 3000,
-                    class: 'bg-danger me-3 my-3'
+                    class: 'text-bg-danger me-3 my-3'
                 });
             });
         }
@@ -216,7 +213,7 @@ function sync_all_job_template() {
             body: 'Started',
             autohide: true,
             delay: 3000,
-            class: 'bg-info me-3 my-3'
+            class: 'text-bg-info me-3 my-3'
         });
         // disable sync button
         document.getElementById(sync_button_id).classList.add('disabled');
@@ -231,7 +228,7 @@ function sync_all_job_template() {
             body: 'Error',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger me-3 my-3'
+            class: 'text-bg-danger me-3 my-3'
         });
         console.log(err);
     });
@@ -254,7 +251,7 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
                 body: 'Complete',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-success me-3 my-3'
+                class: 'text-bg-success me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -279,7 +276,7 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
                 body: 'Failed',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-danger me-3 my-3'
+                class: 'text-bg-danger me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -292,7 +289,7 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
             body: 'Failed',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger me-3 my-3',
+            class: 'text-bg-danger me-3 my-3',
         });
         // enable back sync button
         document.getElementById(sync_button_id).classList.remove('disabled');
@@ -319,7 +316,7 @@ function sync_job_template() {
             body: 'Started',
             autohide: true,
             delay: 3000,
-            class: 'bg-info me-3 my-3'
+            class: 'text-bg-info me-3 my-3'
         });
         // disable sync button
         document.getElementById(sync_button_id).classList.add('disabled');
@@ -334,7 +331,7 @@ function sync_job_template() {
             body: 'Error',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger me-3 my-3'
+            class: 'text-bg-danger me-3 my-3'
         });
         console.log(err);
     });
@@ -358,7 +355,7 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
                 body: 'Complete',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-success me-3 my-3'
+                class: 'text-bg-success me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -392,7 +389,7 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
                 body: 'Failed',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-danger me-3 my-3'
+                class: 'text-bg-danger me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -407,7 +404,7 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
             body: 'Failed',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger me-3 my-3',
+            class: 'text-bg-danger me-3 my-3',
         });
         // enable back sync button
         document.getElementById(sync_button_id).classList.remove('disabled');
