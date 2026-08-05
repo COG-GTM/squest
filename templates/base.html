@@ -1,6 +1,6 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="en" {% if request.user.is_authenticated and request.user.profile.theme == "dark" %}data-bs-theme="dark"{% endif %}>
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -10,6 +10,8 @@
     <script src="{% static 'jquery/dist/jquery.min.js' %}"></script>
     <script src="{% static 'jquery-ui-dist/jquery-ui.js' %}"></script>
 
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'bootstrap/dist/css/bootstrap.min.css' %}">
     <!-- AdminLTE CSS -->
     <link rel="stylesheet" href="{% static 'admin-lte/dist/css/adminlte.min.css' %}">
     <!-- Bootstrap select -->
@@ -17,19 +19,15 @@
     <!-- Tower Service Catalog -->
     <link rel="stylesheet" type="text/css" href="{% static 'squest/css/pygments.css' %}">
     <link rel="shortcut icon" type="image/png" href="{% static '/squest/img/squest_logo.png' %}"/>
-    <!-- Tempus dominus -->
-    <link href="{% static 'admin-lte/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css' %}"
-          type="text/css" media="all" rel="stylesheet">
-    <link href="{% static 'admin-lte/plugins/daterangepicker/daterangepicker.css' %}" type="text/css" media="all"
-          rel="stylesheet">
     <!-- Martor -->
     <link href="{% static 'plugins/css/ace.min.css' %}" type="text/css" media="all" rel="stylesheet"/>
     <link href="{% static 'martor/css/martor.bootstrap.min.css' %}" type="text/css" media="all" rel="stylesheet"/>
     <link href="{% static '@fortawesome/fontawesome-free/css/all.css' %}" rel="stylesheet">
     <link href="{% static '@highlightjs/cdn-assets/styles/github.min.css' %}" rel="stylesheet">
     <!-- Datatable -->
-    <link href="{% static 'datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
-    <link href="{% static 'datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css' %}" rel="stylesheet">
+    <link href="{% static 'datatables.net-bs5/css/dataTables.bootstrap5.min.css' %}" rel="stylesheet">
+    <link href="{% static 'datatables.net-buttons-bs5/css/buttons.bootstrap5.min.css' %}" rel="stylesheet">
+    <link href="{% static 'datatables.net-fixedcolumns-bs5/css/fixedColumns.bootstrap5.min.css' %}" rel="stylesheet">
 
     <!-- custom squest css -->
     <link rel="stylesheet" type="text/css" href="{% static 'squest/css/squest.css' %}">
@@ -44,27 +42,24 @@
         {% endblock %}
     </title>
 </head>
-<body class="sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed
-        {% if request.user %}{% if request.user.profile.theme == "dark" %}dark-mode{% endif %}{% endif %}
-        {% if 'login' in request.path %} lockscreen{% endif %}">
-<div class="wrapper">
+<body class="sidebar-mini layout-fixed{% if 'login' in request.path %} login-page{% endif %}">
+<div class="app-wrapper">
     {% if 'login' not in request.path %}
         {% include 'navbar.html' %}
         {% include 'sidebar.html' %}
     {% endif %}
 
     {% block content %}
-        <div class="content-wrapper">
+        <main class="app-main">
             {% block begin_content %}{% endblock %}
             {% block header %}
-                <div class="content-header">
+                <div class="app-content-header">
                     <div class="container-fluid">
                         {% if messages %}
                             <div id="django_message_container">
                             {% for message in messages %}
                                 <div class="alert alert-{{ message.tags | lower }} alert-dismissible">
-                                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                     {{ message }}
                                 </div>
                             {% endfor %}
@@ -95,12 +90,12 @@
                 </div>
 
             {% endblock %}
-            <div class="content">
+            <div class="app-content">
                 {% block main %}{% endblock %}
             </div>
 
             {% block end_content %}{% endblock %}
-        </div>
+        </main>
     {% endblock %}
     {% block right_aside %}
     {% endblock %}
@@ -109,7 +104,7 @@
     {% is_dev_server as is_dev_server_bool %}
     <!-- Footer -->
     {% if 'login' not in request.path %}
-        <footer class="main-footer {% if is_dev_server_bool %}bg-warning{% endif %}">
+        <footer class="app-footer {% if is_dev_server_bool %}bg-warning{% endif %}">
             <div class="d-sm-inline justify-content-around">
                 <a class="text-secondary" href="https://hewlettpackard.github.io/squest/{% squest_version %}"><i
                         class="fas fa-book"></i>
@@ -122,7 +117,7 @@
                     Squest community chat</a>
             </div>
 
-            <div class="float-right d-none d-sm-inline">
+            <div class="float-end d-none d-sm-inline">
                 {% if is_dev_server_bool %}
                     <strong class="text-white">DEV SERVER</strong>
                 {% endif %}
@@ -131,17 +126,16 @@
         </footer>
     {% endif %}
 
-    <div id="sidebar-overlay"></div>
-</div> <!-- end wrapper-->
+</div> <!-- end app-wrapper-->
 <!-- Bootstrap JS -->
 <script src="{% static 'bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
 <!-- datatable -->
 <script src="{% static 'datatables.net/js/jquery.dataTables.js' %}"></script>
-<script src="{% static 'datatables.net-bs4/js/dataTables.bootstrap4.js' %}"></script>
+<script src="{% static 'datatables.net-bs5/js/dataTables.bootstrap5.js' %}"></script>
 <script src="{% static 'datatables.net-buttons/js/dataTables.buttons.js' %}"></script>
 <script src="{% static 'datatables.net-fixedcolumns/js/dataTables.fixedColumns.js' %}"></script>
-<script src="{% static 'datatables.net-fixedcolumns-bs4/js/fixedColumns.bootstrap4.js' %}"></script>
-<script src="{% static 'datatables.net-buttons-bs4/js/buttons.bootstrap4.js' %}"></script>
+<script src="{% static 'datatables.net-fixedcolumns-bs5/js/fixedColumns.bootstrap5.js' %}"></script>
+<script src="{% static 'datatables.net-buttons-bs5/js/buttons.bootstrap5.js' %}"></script>
 <script src="{% static 'datatables.net-buttons/js/buttons.html5.js' %}"></script>
 <script src="{% static 'datatables.net-buttons/js/buttons.colVis.js' %}"></script>
 <!-- adminlte -->

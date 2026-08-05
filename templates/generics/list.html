@@ -16,7 +16,7 @@
         {% include html_button_path %}
     {% endif %}
     {% if filter %}
-        <a class="btn btn-default" data-widget="control-sidebar">
+        <a class="btn btn-secondary" data-bs-toggle="offcanvas" data-bs-target="#squest-filter-offcanvas" href="#squest-filter-offcanvas">
             <i class="fas fa-sliders-h"></i>
         </a>
     {% endif %}
@@ -34,7 +34,7 @@
                     </div>
                 {% else %}
                     <div class="alert alert-info alert-dismissible">
-                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         <h4><i class="icon fas fa-info }}"></i> No data</h4>
                         {{ no_data_message }}
                     </div>
@@ -50,9 +50,6 @@
                 checkboxes[i].checked = source.checked;
         }
     </script>
-    <script src="{% static 'admin-lte/plugins/daterangepicker/daterangepicker.js' %}"></script>
-    <script src="{% static 'admin-lte/plugins/moment/moment.min.js' %}"></script>
-    <script src="{% static 'admin-lte/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.js' %}"></script>
 {% endblock %}
 
 {% block end_content %}
@@ -62,20 +59,15 @@
 
 {% block right_aside %}
     {% if filter %}
-        <aside class="control-sidebar control-sidebar-{{ request.user.profile.theme }} overflow-auto"
-               style="display: block; width: 50%">
-            <div class="row">
-                <a class="nav-link float-left" data-widget="control-sidebar">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="squest-filter-offcanvas"
+             aria-labelledby="squest-filter-offcanvas-label" style="width: 50%">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="squest-filter-offcanvas-label"><i class="fas fa-search"></i> Filter</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
             </div>
-            <div class="p-3 control-sidebar-content" style="margin-bottom: 4rem">
-                <div class="row pb-3">
-                    <h3 class="card-title"><i class="fas fa-search"></i> Filter</h3>
-                </div>
+            <div class="offcanvas-body">
                 {% include 'generics/form_edit.html' with form=filter.form action='apply' method='get' %}
-
             </div>
-        </aside>
+        </div>
     {% endif %}
 {% endblock %}

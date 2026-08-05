@@ -5,30 +5,24 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Squest | Maintenance</title>
-    <!-- Google Font: Source Sans Pro -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" crossorigin="anonymous"/>
-    <!-- Theme style -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.1.0/css/adminlte.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="{% static 'bootstrap/dist/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'admin-lte/dist/css/adminlte.min.css' %}">
+    <link rel="stylesheet" href="{% static '@fortawesome/fontawesome-free/css/all.css' %}">
 </head>
-<body class="hold-transition lockscreen">
+<body class="login-page">
 <!-- Automatic element centering -->
-<div class="lockscreen-wrapper" style="max-width: 500px;">
-    <div class="lockscreen-logo">
+<div class="login-box" style="max-width: 500px;">
+    <div class="login-logo">
         <img src="{% static 'squest/img/squest_logo_v2_300_300.png' %}" alt="squest_logo">
     </div>
-
-    <h3><i class="fas fa-wrench text-olive"></i> Squest is currently under maintenance.</h3>
-
-
+    <div class="card">
+        <div class="card-body login-card-body">
+            <h3><i class="fas fa-wrench text-warning"></i> Squest is currently under maintenance.</h3>
+        </div>
+    </div>
 </div>
 <!-- /.center -->
-<!-- jQuery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<!-- Bootstrap 4 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/js/bootstrap.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script></body>
-<!-- AdminLTE -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/admin-lte/3.1.0/js/adminlte.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{% static 'bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'admin-lte/dist/js/adminlte.min.js' %}"></script>
 
 </html>
