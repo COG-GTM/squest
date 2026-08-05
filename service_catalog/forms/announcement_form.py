@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
-from tempus_dominus.widgets import DateTimePicker
 
+from Squest.utils.datetime_widget import NativeDateTimeInput
 from Squest.utils.squest_model_form import SquestModelForm
 from service_catalog.models.announcement import Announcement
 from service_catalog.models.bootstrap_type import BootstrapType
@@ -11,26 +11,9 @@ class AnnouncementForm(SquestModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super(AnnouncementForm, self).__init__(*args, **kwargs)
-        self.fields['date_start'].widget = DateTimePicker(
-            options={
-                'timeZone': str(timezone.get_current_timezone()),
-                'collapse': False,
-                'minDate': str(timezone.now().astimezone().strftime("%Y-%m-%d 00:00:00")),
-            }, attrs={
-                'append': 'fa fa-calendar',
-                'icon_toggle': True,
-            }
-        )
-        self.fields['date_stop'].widget = DateTimePicker(
-            options={
-                'timeZone': str(timezone.get_current_timezone()),
-                'collapse': False,
-                'minDate': str(timezone.now().astimezone().strftime("%Y-%m-%d 00:00:00")),
-            }, attrs={
-                'append': 'fa fa-calendar',
-                'icon_toggle': True,
-            }
-        )
+        min_date = timezone.now().astimezone().strftime("%Y-%m-%dT00:00")
+        self.fields['date_start'].widget = NativeDateTimeInput(attrs={'min': min_date})
+        self.fields['date_stop'].widget = NativeDateTimeInput(attrs={'min': min_date})
         now = timezone.now().astimezone().strftime("%Y-%m-%d %H:%M")
         tz_name = timezone.get_current_timezone()
         help_text = f"Time Zone is {tz_name} ({now})"

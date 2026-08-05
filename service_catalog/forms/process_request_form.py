@@ -60,7 +60,7 @@ class ProcessRequestForm(forms.Form):
             required=False,
             help_text="",
             choices=choices,
-            widget=forms.Select(attrs={"class": "form-control selectpicker", "data-live-search": "true"})
+            widget=forms.Select(attrs={"class": "selectpicker", "data-live-search": "true"})
         )
 
     def _get_diff_mode_field(self):
@@ -80,7 +80,7 @@ class ProcessRequestForm(forms.Form):
             required=False,
             help_text="",
             choices=choices,
-            widget=forms.Select(attrs={"class": "form-control selectpicker", "data-live-search": "true"})
+            widget=forms.Select(attrs={"class": "selectpicker", "data-live-search": "true"})
         )
 
     def _get_limit_field(self):
@@ -151,7 +151,7 @@ class ProcessRequestForm(forms.Form):
             required=False,
             help_text="",
             choices=self.get_inventories_as_choices(),
-            widget=forms.Select(attrs={"class": "form-control selectpicker", "data-live-search": "true"})
+            widget=forms.Select(attrs={"class": "selectpicker", "data-live-search": "true"})
         )
 
     def _get_verbosity_field(self):
@@ -171,7 +171,7 @@ class ProcessRequestForm(forms.Form):
             required=False,
             help_text="",
             choices=choices,
-            widget=forms.Select(attrs={"class": "form-control selectpicker", "data-live-search": "true"})
+            widget=forms.Select(attrs={"class": "selectpicker", "data-live-search": "true"})
         )
 
     def _get_credentials_field(self):
@@ -192,7 +192,7 @@ class ProcessRequestForm(forms.Form):
             required=False,
             help_text="",
             choices=self.get_credentials_as_choices(),
-            widget=forms.SelectMultiple(attrs={"class": "form-control selectpicker", "data-live-search": "true"})
+            widget=forms.SelectMultiple(attrs={"class": "selectpicker", "data-live-search": "true"})
         )
 
     def is_all_field_visible_to_admin_or_user_only(self):

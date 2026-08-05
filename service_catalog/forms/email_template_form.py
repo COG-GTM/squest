@@ -41,7 +41,7 @@ class EmailTemplateSendForm(SquestForm):
             initial=list(limit_users.values_list("id", flat=True)),
             help_text=f"User emails",
             widget=SelectMultiple(
-                attrs={'class': 'form-control selectpicker', 'data-live-search': 'true'})
+                attrs={'class': 'selectpicker', 'data-live-search': 'true'})
         )
 
     def save(self):
