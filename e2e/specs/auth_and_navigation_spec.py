@@ -119,7 +119,7 @@ def test_adding_an_aap_server_syncs_its_job_templates(admin_page, base_url):
     # the host is unique in the database, and E2E_REUSE_DB re-runs a spec against a kept database
     name = f"Stubbed AAP {uuid.uuid4().hex[:8]}"
     admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
-    admin_page.get_by_role("link", name="Add").click()
+    admin_page.get_by_role("link", name="Add", exact=True).click()
     admin_page.fill("input[name='name']", name)
     admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
     admin_page.fill("input[name='token']", "a-token-the-stub-accepts")
@@ -136,7 +136,7 @@ def test_adding_an_aap_server_syncs_its_job_templates(admin_page, base_url):
 def test_an_aap_server_whose_token_is_refused_is_not_created(admin_page, base_url):
     """The other side of the stubbed boundary: a controller refusing a token surfaces as a form error."""
     admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
-    admin_page.get_by_role("link", name="Add").click()
+    admin_page.get_by_role("link", name="Add", exact=True).click()
     admin_page.fill("input[name='name']", f"Refused AAP {uuid.uuid4().hex[:8]}")
     admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
     admin_page.fill("input[name='token']", AUTH_FAILURE_TOKEN)

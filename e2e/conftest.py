@@ -103,6 +103,17 @@ def _pump_redacted(stream, log_file, secrets):
         log_file.flush()
 
 
+def _pump_redacted_to_file(stream, log_path, secrets):
+    """``_pump_redacted`` owning the log file, for a pump running in a thread.
+
+    The thread outlives the fixture that started it whenever the pipe has not reached EOF yet (a
+    grandchild of the server inheriting stdout), so the handle it writes to must not belong to that
+    fixture: it would be closed under the thread, and its next write would raise in the background.
+    """
+    with log_path.open("a") as log_file:
+        _pump_redacted(stream, log_file, secrets)
+
+
 def _run_management_command(*arguments, environment, log_file, log_path):
     command = [sys.executable, "manage.py", *arguments]
     log_file.write(f"\n$ {' '.join(command)}\n")
@@ -228,26 +239,25 @@ def live_server(seeded_database, squest_environment, server_log_path):
     port = _free_port()
     base_url = f"http://127.0.0.1:{port}"
     environment = dict(squest_environment, SQUEST_HOST=base_url)
-    with server_log_path.open("a") as log_file:
-        server = subprocess.Popen(
-            [sys.executable, "manage.py", "runserver", "--noreload", f"127.0.0.1:{port}"],
-            cwd=REPO_ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-        )
-        log_pump = threading.Thread(target=_pump_redacted,
-                                    args=(server.stdout, log_file, _secrets_of(environment)), daemon=True)
-        log_pump.start()
+    server = subprocess.Popen(
+        [sys.executable, "manage.py", "runserver", "--noreload", f"127.0.0.1:{port}"],
+        cwd=REPO_ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    log_pump = threading.Thread(target=_pump_redacted_to_file,
+                                args=(server.stdout, server_log_path, _secrets_of(environment)), daemon=True)
+    log_pump.start()
+    try:
+        _wait_until_serving(server, base_url, server_log_path)
+        yield base_url
+    finally:
+        server.terminate()
         try:
-            _wait_until_serving(server, base_url, server_log_path)
-            yield base_url
-        finally:
-            server.terminate()
-            try:
-                server.wait(timeout=30)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait()
-            # before the log file is closed under it
-            log_pump.join(timeout=10)
+            server.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait()
+        # so the log holds everything the server said on its way down
+        log_pump.join(timeout=10)
 
 
 def _wait_until_serving(server, base_url, server_log_path):
