@@ -101,7 +101,7 @@ def reachable_sidebar_entry(page: Page, name: str):
     entry = sidebar_entry(page, name)
     if entry.count() == 0:
         raise AssertionError(f"the sidebar has no '{name}' entry for this user. Visible entries: "
-                            f"{visible_sidebar_entries(page)}")
+                             f"{visible_sidebar_entries(page)}")
     return entry
 
 
