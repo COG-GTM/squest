@@ -6,4 +6,5 @@ omit =
     manage.py
     */apps.py
     service_catalog/management/commands/*
-    scripts/*
+    scripts/patch_coverage.py
+    scripts/spawn_coverage_session.py
