@@ -46,7 +46,8 @@ grants `squest_user` on it, and the Django test runner recreates it anyway, so t
 without touching the dev database). That database is dropped and recreated at the start of a run, so
 a session holds an exclusive lock on it for its whole duration: a second `pytest` on the same
 machine waits for the first one instead of pulling the database out from under it. To run two suites
-at the same time, give them different `E2E_DB_DATABASE` values.
+at the same time, give them different `E2E_DB_DATABASE` values (the compose file only grants
+`squest_user` on `squest_db` and `test_squest_db`, so another name needs its own `GRANT`).
 
 ## Writing a spec
 
