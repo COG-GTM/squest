@@ -40,6 +40,7 @@ poetry run pytest e2e/specs/auth_and_navigation_spec.py
 poetry run pytest --headed --slowmo 400              # watch it
 E2E_PAUSE_MS=2000 poetry run pytest --headed -k nav  # ... and hold on the asserted page at the end
 E2E_REUSE_DB=1 poetry run pytest -k instance         # keep the seeded database: re-runs in seconds
+                                                     # (still migrated, just not dropped or re-seeded)
 ```
 
 `--slowmo` pads Playwright actions, so a test whose last step is an assertion still flashes past in
@@ -61,7 +62,8 @@ It also starts the server from an allow list of environment variables rather tha
 shell (Squest prints `os.environ` under `DEBUG`, and an unrelated secret must not end up in a log a
 CI job keeps), so a variable the suite is not told about — including `SECRET_KEY`, which falls back
 to the built-in development value — does not reach it. Add the key to `PASSTHROUGH_ENVIRONMENT_KEYS`
-in `e2e/conftest.py` if a spec needs one, and to `SECRET_ENVIRONMENT_KEYS` if it is a secret.
+in `e2e/conftest.py` if a spec needs one; a name matching `SECRET_ENVIRONMENT_KEY_PATTERN`
+(`PASSWORD`, `SECRET`, `TOKEN`, `CREDENTIAL`, `*_KEY`) has its value scrubbed out of the log.
 
 ## Writing a spec
 

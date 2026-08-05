@@ -9,10 +9,10 @@ Session scoped fixtures do the expensive work once per ``pytest`` run:
 ``seeded_database``  drops, recreates, migrates and seeds the end to end database
 ``live_server``      runs ``manage.py runserver`` against it and returns its base URL
 
-Set ``E2E_REUSE_DB=1`` to keep the database from the previous run (skips drop/migrate/seed), which
-turns a re-run of a single spec into a couple of seconds. Set ``E2E_PAUSE_MS`` to hold the browser
-still for that long at the end of every test, which is what makes a ``--headed`` run watchable and
-what keeps ``--video`` from cutting off the state a test asserts on.
+Set ``E2E_REUSE_DB=1`` to keep the database from the previous run (it is migrated, but not dropped or
+re-seeded), which turns a re-run of a single spec into a couple of seconds. Set ``E2E_PAUSE_MS`` to
+hold the browser still for that long at the end of every test, which is what makes a ``--headed`` run
+watchable and what keeps ``--video`` from cutting off the state a test asserts on.
 """
 import contextlib
 import fcntl
@@ -57,9 +57,11 @@ PASSTHROUGH_ENVIRONMENT_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TZ", "VIRTUAL
                                 "DB_USER", "DB_PASSWORD", "REDIS_CACHE_HOST", "REDIS_CACHE_PORT",
                                 "REDIS_CACHE_PASSWORD", "RABBITMQ_HOST", "RABBITMQ_PORT", "RABBITMQ_USER",
                                 "RABBITMQ_PASSWORD"]
-# ... and the values of these are scrubbed out of the log on the way in, because that environment dump
-# would otherwise put the infrastructure passwords in a file a CI job may keep as an artifact
-SECRET_ENVIRONMENT_KEYS = ["DB_PASSWORD", "REDIS_CACHE_PASSWORD", "RABBITMQ_PASSWORD"]
+# ... and the value of every variable whose name looks like a credential is scrubbed out of the log on
+# the way in, because that environment dump would otherwise put it in a file a CI job may keep as an
+# artifact. By name rather than by an explicit list, so that adding a key to the allow list above
+# cannot quietly start leaking it
+SECRET_ENVIRONMENT_KEY_PATTERN = re.compile(r"PASSWORD|SECRET|TOKEN|_KEY$|CREDENTIAL")
 REDACTED = "***redacted by the e2e harness***"
 
 expect.set_options(timeout=DEFAULT_EXPECT_TIMEOUT_MS)
@@ -99,7 +101,9 @@ def _free_port():
 
 
 def _secrets_of(environment):
-    return [environment[key] for key in SECRET_ENVIRONMENT_KEYS if environment.get(key)]
+    # longest first, so a secret containing another one does not leave its tail behind
+    return sorted({value for key, value in environment.items()
+                   if value and SECRET_ENVIRONMENT_KEY_PATTERN.search(key)}, key=len, reverse=True)
 
 
 def _pump_redacted(stream, log_file, secrets):
@@ -129,6 +133,7 @@ def _run_management_command(*arguments, environment, log_file, log_path):
     process = subprocess.Popen(command, cwd=REPO_ROOT, env=environment, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, text=True)
     _pump_redacted(process.stdout, log_file, _secrets_of(environment))
+    process.stdout.close()
     if process.wait() != 0:
         raise RuntimeError(f"'{' '.join(arguments)}' failed with {process.returncode}. See {log_path}.")
 
@@ -170,9 +175,9 @@ def seeded_database(squest_environment, server_log_path, announce):
     with _database_lock(announce):
         with server_log_path.open("w") as log_file:
             if E2E_REUSE_DB:
-                if not _database_exists(squest_environment):
-                    raise RuntimeError(f"E2E_REUSE_DB is set but the '{E2E_DB_DATABASE}' database does not exist "
-                                       f"yet. Run once without E2E_REUSE_DB to create and seed it.")
+                if not _database_is_seeded(squest_environment):
+                    raise RuntimeError(f"E2E_REUSE_DB is set but the '{E2E_DB_DATABASE}' database does not hold the "
+                                       f"demo data yet. Run once without E2E_REUSE_DB to create and seed it.")
                 # a kept database was seeded by an older revision: a migration added since then would
                 # otherwise surface as a column error deep inside a spec
                 commands = [("migrate", "--noinput")]
@@ -218,6 +223,26 @@ def _database_exists(environment):
         cursor.execute("SELECT schema_name FROM information_schema.schemata WHERE schema_name = %s",
                        (E2E_DB_DATABASE,))
         return cursor.fetchone() is not None
+
+
+def _database_is_seeded(environment):
+    """Whether the database holds the demo data, rather than only existing.
+
+    A run interrupted between ``_recreate_database`` and ``insert_demo_data`` leaves an empty schema
+    behind, and an ``E2E_REUSE_DB`` re-run against that would fail one spec at a time on missing demo
+    objects instead of saying what is wrong.
+    """
+    import MySQLdb
+
+    if not _database_exists(environment):
+        return False
+    with _mysql_connection(environment) as connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM {E2E_DB_DATABASE}.auth_user")
+        except MySQLdb.Error:
+            return False
+        return cursor.fetchone()[0] > 0
 
 
 def _recreate_database(environment):
@@ -269,6 +294,8 @@ def live_server(seeded_database, squest_environment, server_log_path):
             server.wait()
         # so the log holds everything the server said on its way down
         log_pump.join(timeout=10)
+        if not log_pump.is_alive():
+            server.stdout.close()
 
 
 def _wait_until_serving(server, base_url, server_log_path):
