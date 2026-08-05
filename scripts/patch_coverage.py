@@ -28,15 +28,19 @@ def changed_lines(base_ref):
     diff = run("git", "diff", "--merge-base", "--unified=0", base_ref, "--", "*.py")
     per_file = {}
     current = None
+    in_hunks = False
     for line in diff.splitlines():
-        if line.startswith("+++ b/"):
+        # only the lines before the first hunk of a file are headers; afterwards a body line may
+        # legitimately start with --- or +++ and must not be mistaken for one
+        if line.startswith("diff --git "):
+            current, in_hunks = None, False
+        elif not in_hunks and line.startswith("+++ b/"):
             current = line[len("+++ b/"):]
             per_file.setdefault(current, set())
-        elif line.startswith("--- ") or line.startswith("+++ "):
-            current = None
         elif current is not None:
             match = HUNK_HEADER.match(line)
             if match:
+                in_hunks = True
                 start = int(match.group(1))
                 count = 1 if match.group(2) is None else int(match.group(2))
                 per_file[current].update(range(start, start + count))
@@ -55,7 +59,8 @@ def symbol_ranges(path):
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 name = f"{prefix}{child.name}"
-                symbols.append((name, child.lineno, child.end_lineno))
+                first_line = min([child.lineno] + [decorator.lineno for decorator in child.decorator_list])
+                symbols.append((name, first_line, child.end_lineno))
                 walk(child, f"{name}.")
 
     walk(tree, "")

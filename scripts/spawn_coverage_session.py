@@ -76,13 +76,19 @@ def main():
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:
             session = json.loads(response.read())
+        session_url = session.get("url") or f"https://app.devin.ai/sessions/{session['session_id']}"
     except urllib.error.HTTPError as error:
         print(f"Failed to create Devin session: HTTP {error.code} {error.read().decode()}", file=sys.stderr)
         return 1
+    except (urllib.error.URLError, TimeoutError) as error:
+        print(f"Failed to reach the Devin API: {error}", file=sys.stderr)
+        return 1
+    except (json.JSONDecodeError, KeyError) as error:
+        print(f"Unexpected response from the Devin API: {error}", file=sys.stderr)
+        return 1
 
-    session_url = session.get("url") or f"https://app.devin.ai/sessions/{session['session_id']}"
     print(f"Created Devin session: {session_url}")
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:

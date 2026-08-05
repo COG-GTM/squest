@@ -80,7 +80,12 @@ jobs:
       - name: Check whether the PR only touches tests
         id: diff-scope
         run: |
-          if git diff --merge-base --name-only origin/${{ github.base_ref }} | grep -qvE '^tests/'; then
+          changed=$(git diff --merge-base --name-only origin/${{ github.base_ref }})
+          if [ -z "$changed" ]; then
+            echo "No changed files resolved against origin/${{ github.base_ref }} - the merge base is wrong"
+            exit 1
+          fi
+          if echo "$changed" | grep -qvE '^tests/'; then
             echo "tests_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "tests_only=true" >> "$GITHUB_OUTPUT"
@@ -94,13 +99,20 @@ jobs:
           poetry run python scripts/patch_coverage.py \
             --base-ref origin/${{ github.base_ref }} \
             --fail-under ${{ env.PATCH_COVERAGE_THRESHOLD }} \
-            --report patch-coverage.md | tee -a "$GITHUB_STEP_SUMMARY"
+            --report patch-coverage.md
+
+      - name: Publish the patch coverage report
+        if: always() && hashFiles('patch-coverage.md') != ''
+        run: |
+          cat patch-coverage.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Spawn a Devin session to backfill the missing tests
         id: spawn-session
-        # only once per PR: the label added below stops the session's own push from spawning another
+        # only once per PR: the label added below stops the session's own push from spawning another.
+        # fork PRs are excluded: they get no secrets and their head branch is not in this repository
         if: >-
           steps.patch-coverage.outcome == 'failure' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
           !contains(github.event.pull_request.labels.*.name, env.COVERAGE_BACKFILL_LABEL)
         env:
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
@@ -117,7 +129,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --add-label "${{ env.COVERAGE_BACKFILL_LABEL }}"
           {
             echo "Patch coverage is below ${{ env.PATCH_COVERAGE_THRESHOLD }}%, so a Devin session was started to backfill tests for the symbols this PR left uncovered: ${{ steps.spawn-session.outputs.session_url }}"
             echo
@@ -125,8 +136,12 @@ jobs:
             cat patch-coverage.md
             echo '```'
           } | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+          # the label is what stops a second session from being spawned, so create it if it is missing
+          gh label create "${{ env.COVERAGE_BACKFILL_LABEL }}" --description "A Devin session was spawned to backfill coverage" || true
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "${{ env.COVERAGE_BACKFILL_LABEL }}"
 
       - name: Enforce coverage gates
+        if: always()  # a failure to spawn or comment must not hide a coverage regression
         run: |
           poetry run coverage report --fail-under=${{ env.PROJECT_COVERAGE_THRESHOLD }}
           if [ "${{ steps.patch-coverage.outcome }}" = "failure" ]; then
