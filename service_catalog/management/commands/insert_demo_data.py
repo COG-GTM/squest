@@ -32,15 +32,15 @@ DEMO_SURVEY = [
         "question_description": "Number of virtual CPUs",
     },
     {
-        "max": 262144,
-        "min": 1024,
+        "max": 256,
+        "min": 1,
         "type": "integer",
         "choices": "",
-        "default": 4096,
+        "default": 8,
         "required": True,
         "variable": "memory",
-        "question_name": "Memory (MB)",
-        "question_description": "Amount of memory in MB",
+        "question_name": "Memory (GB)",
+        "question_description": "Amount of memory in GB",
     },
     {
         "max": 0,
@@ -228,7 +228,7 @@ class Command(BaseCommand):
                 operation=operation,
                 defaults={
                     "user": user,
-                    "fill_in_survey": {"vcpu": 2, "memory": 4096, "environment": "dev"},
+                    "fill_in_survey": {"vcpu": 2, "memory": 8, "environment": "dev"},
                 },
             )
             if created:
