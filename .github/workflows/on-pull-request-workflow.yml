@@ -67,6 +67,10 @@ jobs:
         run: |
           poetry run coverage lcov
 
+      - name: Generate json report
+        run: |
+          poetry run coverage json -o coverage.json
+
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v4
         with:
@@ -79,10 +83,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: coverage.lcov
 
-      - name: Generate json report
-        run: |
-          poetry run coverage json -o coverage.json
-
       - name: Check whether the PR only touches tests
         id: diff-scope
         env:
@@ -93,10 +93,18 @@ jobs:
           if [ -z "$changed" ]; then
             echo "No files changed against $BASE_REF - skipping the patch coverage gate"
             echo "tests_only=true" >> "$GITHUB_OUTPUT"
-          elif echo "$changed" | grep -qvE '^tests/'; then
-            echo "tests_only=false" >> "$GITHUB_OUTPUT"
           else
-            echo "tests_only=true" >> "$GITHUB_OUTPUT"
+            # grep exits 1 for "every path is under tests/" and 2 for its own failure, which errexit does
+            # not catch inside a condition: a broken check must not silently skip the gate
+            set +e
+            echo "$changed" | grep -qvE '^tests/'
+            rc=$?
+            set -e
+            if [ "$rc" -gt 1 ]; then
+              echo "grep failed with status $rc while classifying the changed files" >&2
+              exit "$rc"
+            fi
+            echo "tests_only=$([ "$rc" -eq 0 ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check patch coverage
