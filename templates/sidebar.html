@@ -23,30 +23,31 @@
 {% endcache %}
 
 <!-- Main Sidebar Container -->
-<aside class="main-sidebar {% if request.user.profile.theme == "dark" %}sidebar-dark-primary{% else %}sidebar-light-white{% endif %} elevation-4">
+<aside class="app-sidebar bg-body-secondary shadow" {% if request.user.profile.theme == "dark" %}data-bs-theme="dark"{% endif %}>
     <!-- Brand Logo -->
-    <a href="{% url 'home' %}" class="brand-link">
-        <img src="{% static '/squest/img/squest_logo.png' %}" class="brand-image" alt="squest_logo" width="33"
-             height="33">
-        <span class="brand-text">Squest</span>
-    </a>
+    <div class="sidebar-brand">
+        <a href="{% url 'home' %}" class="brand-link">
+            <img src="{% static 'squest/img/squest_logo.png' %}" class="brand-image" alt="squest_logo" width="33"
+                 height="33">
+            <span class="brand-text">Squest</span>
+        </a>
+    </div>
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar-wrapper">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
-            <ul class="nav nav-pills nav-sidebar flex-column nav-collapse-hide-child nav-child-indent"
-                data-widget="treeview" role="menu">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
                 {% generate_sidebar request.user as sidebar_dict %}
                 {% for group_name, group_data in sidebar_dict.items %}
                     <li class="nav-header">{{ group_name }}</li>
                     {% for view in group_data %}
-                        <li class="nav-item {% if view.treeview_items %}has-treeview {% if request.resolver_match.url_name in view.active %}menu-open{% endif %}{% endif %}">
+                        <li class="nav-item {% if view.treeview_items %}{% if request.resolver_match.url_name in view.active %}menu-open{% endif %}{% endif %}">
                             <a href="{% if view.view_name %}{% url view.view_name %}{% else %}#{% endif %}"
                                class="nav-link {% if request.resolver_match.url_name in view.active %}active{% endif %}">
                                 <i class="nav-icon {{ view.icon }}"></i>
                                 <p>{{ view.name }}
                                     {% if view.treeview_items %}
-                                        <i class="right fas fa-angle-down"></i>
+                                        <i class="nav-arrow fas fa-angle-down"></i>
                                     {% endif %}
                                 </p>
                             </a>

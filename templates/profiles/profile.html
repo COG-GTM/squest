@@ -10,16 +10,16 @@
             <div class="card-header p-2">
                 <ul class="nav nav-pills squest-default-active" id="tabs">
                     <li class="nav-item">
-                        <a href="#details" data-toggle="tab" class="nav-link">Details</a>
+                        <a href="#details" data-bs-toggle="tab" class="nav-link">Details</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#tokens" data-toggle="tab" class="nav-link">Tokens</a>
+                        <a href="#tokens" data-bs-toggle="tab" class="nav-link">Tokens</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#request-notifications" data-toggle="tab" class="nav-link">Request notifications</a>
+                        <a href="#request-notifications" data-bs-toggle="tab" class="nav-link">Request notifications</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#instance-notifications" data-toggle="tab" class="nav-link">Instance notifications</a>
+                        <a href="#instance-notifications" data-bs-toggle="tab" class="nav-link">Instance notifications</a>
                     </li>
                 </ul>
             </div>
@@ -58,7 +58,7 @@
                         </dl>
                     </div>
                     <div id="tokens" class="tab-pane">
-                        <a title="Create a new token" class="btn btn-success float-sm-right mb-2"
+                        <a title="Create a new token" class="btn btn-success float-sm-end mb-2"
                            href="{% url "profiles:token_create" %}">
                             <i class="fas fa-plus"></i> Add token
                         </a>
@@ -81,7 +81,7 @@
                                     <td class="align-middle">{{ token }}</td>
                                     <td class="align-middle">
                                                 <span title="Show key"
-                                                      data-toggle="modal" data-target="#tokenDialog"
+                                                      data-bs-toggle="modal" data-bs-target="#tokenDialog"
                                                       data-token="{{ token.key }}"
                                                       class="btn btn-secondary showButton">
                                                     <i class="fas fa-eye"></i>
@@ -110,13 +110,13 @@
                     <div id="request-notifications" class="tab-pane">
                         <dl class="row">
                             <div class="col-md-3 col-6">
-                                <div class="small-box bg{% if user.profile.request_notification_enabled %}-success{% else %}-gray{% endif %}">
+                                <div class="small-box {% if user.profile.request_notification_enabled %}text-bg-success{% else %}text-bg-secondary{% endif %}">
                                     <div class="inner">
                                         <p><strong>Request</strong> notifications are <strong>
                                             {% if user.profile.request_notification_enabled %}enabled{% else %}
                                                 disabled{% endif %}</strong></p>
                                     </div>
-                                    <div class="icon">
+                                    <div class="small-box-icon">
                                         <i class="fas fa-bell{% if not user.profile.request_notification_enabled %}-slash{% endif %}"></i>
                                     </div>
                                     <a href="{% url "profiles:requestnotification_switch" %}" class="small-box-footer">
@@ -129,7 +129,7 @@
                         </dl>
                         <div class="row">
                             <div class="col-12">
-                                <a title="Add a notification filter" class="btn btn-default mb-2"
+                                <a title="Add a notification filter" class="btn btn-outline-secondary mb-2"
                                    href="{% url "profiles:requestnotification_create" %}">
                                     <i class="fas fa-plus"></i> Add a request notification filter
                                 </a>
@@ -149,13 +149,13 @@
                     <div id="instance-notifications" class="tab-pane">
                         <dl class="row">
                             <div class="col-md-3 col-6">
-                                <div class="small-box bg{% if user.profile.instance_notification_enabled %}-success{% else %}-gray{% endif %}">
+                                <div class="small-box {% if user.profile.instance_notification_enabled %}text-bg-success{% else %}text-bg-secondary{% endif %}">
                                     <div class="inner">
                                         <p><strong>Instance</strong> notifications are <strong>
                                             {% if user.profile.instance_notification_enabled %}enabled{% else %}
                                                 disabled{% endif %}</strong></p>
                                     </div>
-                                    <div class="icon">
+                                    <div class="small-box-icon">
                                         <i class="fas fa-bell{% if not user.profile.instance_notification_enabled %}-slash{% endif %}"></i>
                                     </div>
                                     <a href="{% url "profiles:instancenotification_switch" %}" class="small-box-footer">
@@ -168,7 +168,7 @@
                         </dl>
                         <div class="row">
                             <div class="col-12">
-                                <a title="Add a notification filter" class="btn btn-default mb-2"
+                                <a title="Add a notification filter" class="btn btn-outline-secondary mb-2"
                                    href="{% url "profiles:instancenotification_create" %}">
                                     <i class="fas fa-plus"></i> Add a instance notification filter
                                 </a>
@@ -195,15 +195,13 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="tokenDialogLabel">Token</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <p id="tokenKey"></p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -211,10 +209,10 @@
 {% endblock %}
 {% block custom_script %}
     <script>
-        $('#tokenDialog').on('show.bs.modal', function (event) {
-            var button = $(event.relatedTarget)
-            var recipient = button.data('token')
-            $('#tokenKey').text(recipient)
+        document.getElementById('tokenDialog').addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var recipient = button.getAttribute('data-token');
+            document.getElementById('tokenKey').textContent = recipient;
         });
         add_tab_management();
     </script>

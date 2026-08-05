@@ -1,7 +1,7 @@
 
 from django.forms import Select, CheckboxInput, CheckboxSelectMultiple, RadioSelect, FileInput, DateTimeInput, Form
-from django.utils import timezone
-from tempus_dominus.widgets import DateTimePicker
+
+from Squest.utils.datetime_widget import NativeDateTimeInput
 
 
 class SquestForm(Form):
@@ -24,10 +24,10 @@ class SquestForm(Form):
     def beautify(self):
         for field_name, current_field in self.fields.items():
             if isinstance(current_field.widget, Select):
-                current_field.widget.attrs['class'] = 'form-control selectpicker'
+                current_field.widget.attrs['class'] = 'selectpicker'
                 current_field.widget.attrs['data-live-search'] = "true"
             elif isinstance(current_field.widget, CheckboxInput):
-                current_field.widget.attrs['class'] = ''
+                current_field.widget.attrs['class'] = 'form-check-input'
             elif isinstance(current_field.widget, CheckboxSelectMultiple):
                 current_field.widget.attrs['class'] = 'form-control form-control-checkbox disable_list_style'
             elif isinstance(current_field.widget, RadioSelect):
@@ -35,14 +35,6 @@ class SquestForm(Form):
             elif isinstance(current_field.widget, FileInput):
                 current_field.widget.attrs['class'] = ""
             elif isinstance(current_field.widget, DateTimeInput):
-                current_field.widget = DateTimePicker(
-                    options={
-                        'timeZone': str(timezone.get_current_timezone()),
-                        'collapse': False,
-                    }, attrs={
-                        'append': 'fa fa-calendar',
-                        'icon_toggle': True,
-                    }
-                )
+                current_field.widget = NativeDateTimeInput(attrs=current_field.widget.attrs)
             else:
                 current_field.widget.attrs['class'] = 'form-control'

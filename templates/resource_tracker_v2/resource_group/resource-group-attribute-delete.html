@@ -3,9 +3,9 @@
     {{ resource_group.name }} | Resource group
 {%  endblock %}
 {% block content %}
-    <div class="content-wrapper" style="min-height: 278px;">
+    <main class="app-main">
         <!-- Content Header (Page header) -->
-        <div class="content-header">
+        <div class="app-content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
@@ -14,15 +14,15 @@
                 </div><!-- /.row -->
             </div><!-- /.container-fluid -->
         </div>
-        <!-- /.content-header -->
+        <!-- /.app-content-header -->
         <!-- Main content -->
-        <div class="content">
+        <div class="app-content">
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-body">
 
                         {% if impacted_resources.count > 0 %}
-                            <blockquote class="quote-warning">
+                            <blockquote class="blockquote border-start border-4 border-warning ps-3">
                                 <h5>Attribute in use</h5>
                                 <p>This attribute is in use by following resource: </p>
                                 <ul>
@@ -36,11 +36,11 @@
                         <form action="{% url 'resource_tracker_v2:transformer_delete' resource_group.id attribute.id %}" method='POST'>{% csrf_token %}
                             <p>Do you want to delete the attribute "{{ attribute.name }}"?</p>
                             <button type="submit" class="btn btn-danger">Delete</button>
-                            <a class="btn btn-default" href="{% url 'resource_tracker_v2:transformer_list' resource_group.id %}">Cancel</a>
+                            <a class="btn btn-outline-secondary" href="{% url 'resource_tracker_v2:transformer_list' resource_group.id %}">Cancel</a>
                         </form>
                     </div>
                 </div><!-- end container fluid -->
             </div>
         </div>
-    </div>
+    </main>
 {% endblock %}

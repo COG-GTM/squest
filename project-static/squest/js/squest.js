@@ -1,5 +1,32 @@
-$(document).ready(function () {
+function showToast({title, body, class: toastClass = '', autohide = true, delay = 5000}) {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(container);
+    }
 
+    const toast = document.createElement('div');
+    toast.className = `toast border-0 ${toastClass}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+        <div class="toast-header bg-transparent">
+            <strong class="me-auto"></strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body"></div>
+    `;
+    toast.querySelector('.toast-header strong').textContent = title;
+    toast.querySelector('.toast-body').textContent = body;
+    container.appendChild(toast);
+    const instance = bootstrap.Toast.getOrCreateInstance(toast, {autohide, delay});
+    toast.addEventListener('hidden.bs.toast', () => toast.remove());
+    instance.show();
+}
+
+$(document).ready(function () {
 
     // iterate on all tab panes
     // add #id to all href in all links under tab-pane
@@ -12,12 +39,16 @@ $(document).ready(function () {
                 })
         })
 
-    $('[data-toggle="popover"]').popover({
-        placement: 'top',
-        trigger: 'hover'
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => {
+        new bootstrap.Popover(element, {
+            placement: 'top',
+            trigger: 'hover'
+        });
     });
-    // adapt side bar height to the current page
-    $('.main-sidebar').height($(document).outerHeight());
+
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+        new bootstrap.Tooltip(element);
+    });
 
     $('.ajax_sync_all_job_template').click(sync_all_job_template);
     $('.ajax_sync_job_template').click(sync_job_template);
@@ -91,20 +122,20 @@ $(document).ready(function () {
                     csrfmiddlewaretoken: csrf_token
                 },
             }).done((res) => {
-                // $(document).Toasts('create', {
+                // showToast({
                 //     title: 'Update step order',
                 //     body: 'Complete',
                 //     autohide: true,
                 //     delay: 3000,
-                //     class: 'bg-success mr-3 my-3'
+                //     class: 'text-bg-success me-3 my-3'
                 // });
             }).fail((err) => {
-                $(document).Toasts('create', {
+                showToast({
                     title: 'Update step order',
                     body: 'Error',
                     autohide: true,
                     delay: 3000,
-                    class: 'bg-danger mr-3 my-3'
+                    class: 'text-bg-danger me-3 my-3'
                 });
             });
         }
@@ -135,7 +166,9 @@ function reformatJSON(element) {
 function add_tab_management() {
 
     $('ul#tabs.nav.nav-pills li.nav-item a.nav-link').click(function (e) {
-        $(this).tab('show');
+        e.preventDefault();
+        const tab = bootstrap.Tab.getOrCreateInstance(this);
+        tab.show();
         window.location.hash = this.hash;
         $(document).scrollTop(0);
     });
@@ -143,7 +176,10 @@ function add_tab_management() {
     if (hash) {
         $('ul#tabs.nav.nav-pills li.nav-item a.nav-link[href="' + hash + '"]').trigger('click');
     } else {
-        $("ul#tabs.squest-default-active li.nav-item a:first").tab("show");
+        const firstTab = document.querySelector("ul#tabs.squest-default-active li.nav-item a");
+        if (firstTab) {
+            bootstrap.Tab.getOrCreateInstance(firstTab).show();
+        }
     }
 }
 
@@ -177,12 +213,12 @@ function sync_all_job_template() {
             csrfmiddlewaretoken: csrf_token
         },
     }).done((res) => {
-        $(document).Toasts('create', {
+        showToast({
             title: 'Tower sync',
             body: 'Started',
             autohide: true,
             delay: 3000,
-            class: 'bg-info mr-3 my-3'
+            class: 'text-bg-info me-3 my-3'
         });
         // disable sync button
         document.getElementById(sync_button_id).classList.add('disabled');
@@ -191,13 +227,12 @@ function sync_all_job_template() {
         }, 2000);
 
     }).fail((err) => {
-        alert_error("Error during API call");
-        $(document).Toasts('create', {
+        showToast({
             title: 'Tower sync',
             body: 'Error',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger mr-3 my-3'
+            class: 'text-bg-danger me-3 my-3'
         });
         console.log(err);
     });
@@ -215,12 +250,12 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
     }).done((res) => {
         const taskStatus = res.status;
         if (taskStatus === 'SUCCESS') {
-            $(document).Toasts('create', {
+            showToast({
                 title: 'Tower sync',
                 body: 'Complete',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-success mr-3 my-3'
+                class: 'text-bg-success me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -240,12 +275,12 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
 
         }
         if (taskStatus === 'FAILURE') {
-            $(document).Toasts('create', {
+            showToast({
                 title: 'Tower sync',
                 body: 'Failed',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-danger mr-3 my-3'
+                class: 'text-bg-danger me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -253,12 +288,12 @@ function getTowerUpdateStatus(taskID, tower_id, url_job_template, interval_id) {
             return false;
         }
     }).fail((err) => {
-        $(document).Toasts('create', {
+        showToast({
             title: 'Tower sync',
             body: 'Failed',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger mr-3 my-3',
+            class: 'text-bg-danger me-3 my-3',
         });
         // enable back sync button
         document.getElementById(sync_button_id).classList.remove('disabled');
@@ -280,12 +315,12 @@ function sync_job_template() {
             csrfmiddlewaretoken: csrf_token
         },
     }).done((res) => {
-        $(document).Toasts('create', {
+        showToast({
             title: 'Job template sync from RHAAP/AWX',
             body: 'Started',
             autohide: true,
             delay: 3000,
-            class: 'bg-info mr-3 my-3'
+            class: 'text-bg-info me-3 my-3'
         });
         // disable sync button
         document.getElementById(sync_button_id).classList.add('disabled');
@@ -294,13 +329,12 @@ function sync_job_template() {
         }, 2000);
 
     }).fail((err) => {
-        alert_error("Error during API call");
-        $(document).Toasts('create', {
+        showToast({
             title: 'Job template sync from RHAAP/AWX',
             body: 'Error',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger mr-3 my-3'
+            class: 'text-bg-danger me-3 my-3'
         });
         console.log(err);
     });
@@ -319,12 +353,12 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
     }).done((res) => {
         const taskStatus = res.status;
         if (taskStatus === 'SUCCESS') {
-            $(document).Toasts('create', {
+            showToast({
                 title: 'Tower sync',
                 body: 'Complete',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-success mr-3 my-3'
+                class: 'text-bg-success me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -353,12 +387,12 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
             return true;
         }
         if (taskStatus === 'FAILURE') {
-            $(document).Toasts('create', {
+            showToast({
                 title: 'Tower sync',
                 body: 'Failed',
                 autohide: true,
                 delay: 3000,
-                class: 'bg-danger mr-3 my-3'
+                class: 'text-bg-danger me-3 my-3'
             });
             // enable back sync button
             document.getElementById(sync_button_id).classList.remove('disabled');
@@ -368,12 +402,12 @@ function getJobTemplateUpdateStatus(taskID, job_template_id, url_job_template_de
 
     }).fail((err) => {
         console.log(err);
-        $(document).Toasts('create', {
+        showToast({
             title: 'Tower sync',
             body: 'Failed',
             autohide: true,
             delay: 3000,
-            class: 'bg-danger mr-3 my-3',
+            class: 'text-bg-danger me-3 my-3',
         });
         // enable back sync button
         document.getElementById(sync_button_id).classList.remove('disabled');

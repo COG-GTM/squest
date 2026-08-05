@@ -7,12 +7,12 @@
     {% has_perm request.user "service_catalog.list_service" as can_list_service %}
     {% has_perm request.user "service_catalog.list_portfolio" as can_list_portfolio %}
     {% if can_list_service %}
-        <a class="btn btn-default ml-1" href="{% url 'service_catalog:service_list' %}">
+        <a class="btn btn-outline-secondary ms-1" href="{% url 'service_catalog:service_list' %}">
             <i class="fas fa-list"></i> All services
         </a>
     {% endif %}
     {% if can_list_portfolio %}
-        <a class="btn btn-default ml-1" href="{% url 'service_catalog:portfolio_list' %}">
+        <a class="btn btn-outline-secondary ms-1" href="{% url 'service_catalog:portfolio_list' %}">
             <i class="fas fa-list"></i> All portfolios
         </a>
     {% endif %}
@@ -25,21 +25,21 @@
                     <div class="col-sm-12 col-lg-2 mb-4">
                         <div class="card h-100">
                             <img class="card-img-top" src="
-                                    {% if portfolio.image %}{{ portfolio.image.url }}{% else %}{% static '/squest/img/no_image.png' %}{% endif %}"
+                                    {% if portfolio.image %}{{ portfolio.image.url }}{% else %}{% static 'squest/img/no_image.png' %}{% endif %}"
                                  alt="Portfolio image">
                             <div class="card-body">
-                                <h5 class="card-title">
+                                <h5 class="mb-2">
                                     <strong>{{ portfolio.name }}</strong>
                                 </h5>
                                 <p class="card-text">{{ portfolio.description }}</p>
                             </div>
                             <div class="card-footer">
                                 <a href="{% url 'service_catalog:service_catalog_list' %}?parent_portfolio={{ portfolio.id }}"
-                                   class="btn btn-default">Open</a>
+                                   class="btn btn-outline-secondary">Open</a>
                                 {% if portfolio.description_doc %}
                                     <a title="Description documentation"
                                        href="{% url 'service_catalog:doc_details' portfolio.description_doc.id %}"
-                                       class="text-info float-right"><i class="fas fa-2x fa-info-circle"></i></a>
+                                       class="text-info float-end"><i class="fas fa-2x fa-info-circle"></i></a>
                                 {% endif %}
                             </div>
                         </div>
@@ -51,10 +51,10 @@
                     <div class="col-sm-12 col-lg-2 mb-4">
                         <div class="card h-100">
                             <img class="card-img-top" src="
-                                    {% if service.image %}{{ service.image.url }}{% else %}{% static '/squest/img/no_image.png' %}{% endif %}"
+                                    {% if service.image %}{{ service.image.url }}{% else %}{% static 'squest/img/no_image.png' %}{% endif %}"
                                  alt="Service image">
                             <div class="card-body">
-                                <h5 class="card-title">
+                                <h5 class="mb-2">
                                     <strong>{{ service.name }}</strong>
                                 </h5>
                                 <p class="card-text">{{ service.description }}</p>
@@ -65,7 +65,7 @@
                                 {% if service.description_doc %}
                                     <a title="Description documentation"
                                        href="{% url 'service_catalog:doc_details' service.description_doc.id %}"
-                                       class="text-info float-right"><i class="fas fa-2x fa-info-circle"></i></a>
+                                       class="text-info float-end"><i class="fas fa-2x fa-info-circle"></i></a>
                                 {% endif %}
                             </div>
                         </div>

@@ -5,8 +5,8 @@
 {% block content %}
 
     <!-- Main content -->
-    <div class="content-wrapper">
-        <section class="content-header">
+    <main class="app-main">
+        <div class="app-content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
@@ -14,8 +14,8 @@
                     </div>
                 </div>
             </div><!-- /.container-fluid -->
-        </section>
-        <div class="content">
+        </div>
+        <div class="app-content">
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-body">
@@ -31,30 +31,28 @@
                                 {% endif %}
                             </div>
                         {% endif %}
-                        <form class="form-horizontal" action="{% url 'service_catalog:request_reject' target_request.id %}" method="post">{% csrf_token %}
+                        <form action="{% url 'service_catalog:request_reject' target_request.id %}" method="post">{% csrf_token %}
 
                             {% for field in form %}
-                                <div class="form-group">
-                                    <label for="{{field.name}}" class="col-sm-2 control-label">
+                                <div class="row mb-3">
+                                    <label for="{{field.name}}" class="col-sm-2 col-form-label form-label">
                                         {{ field.label }}
                                     </label>
                                     <div class="col-sm-4">
                                         {{ field }}
                                         {% if field.help_text %}
-                                            <small id="emailHelp" class="form-text text-muted">{{ field.help_text|safe }}</small>
+                                            <small class="form-text text-muted">{{ field.help_text|safe }}</small>
                                         {% endif %}
                                     </div>
                                 </div>
                             {% endfor %}
 
-                            <div class="form-group">
-                                <div class="col-sm-offset-2 col-sm-10">
-                                    <!-- validate button -->
-                                    <button class="btn btn-danger" type="submit">
-                                        <i class="fas fa-ban"></i> Reject request
-                                    </button>
-                                    <a class="btn btn-default" href="{% url 'service_catalog:request_list' %}">Return</a>
-                                </div>
+                            <div class="mb-3">
+                                <!-- validate button -->
+                                <button class="btn btn-danger" type="submit">
+                                    <i class="fas fa-ban"></i> Reject request
+                                </button>
+                                <a class="btn btn-outline-secondary" href="{% url 'service_catalog:request_list' %}">Return</a>
                             </div>
                         </form>
                     </div>
@@ -62,6 +60,6 @@
                 </div><!-- end container fluid -->
             </div>
         </div>
-    </div>
+    </main>
 
 {% endblock %}

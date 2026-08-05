@@ -122,7 +122,6 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_celery_results",
     "django_celery_beat",
-    "tempus_dominus",
     "django_node_assets",
     "django_filters",
     "drf_yasg",

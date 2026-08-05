@@ -22,7 +22,7 @@ class QuotaTable(SquestTable):
 
     def render_consumed(self, value, record):
         link = record.get_absolute_url()
-        return format_html(f'<a href="{link}" class="btn btn-default bg-sm">{value}</a>')
+        return format_html(f'<a href="{link}" class="btn btn-outline-secondary btn-sm">{value}</a>')
 
     def value_consumed(self, value, record):
         return value

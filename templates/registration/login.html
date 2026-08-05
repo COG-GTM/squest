@@ -1,56 +1,45 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-    <div class="container">
-        <div class="register-logo">
-            <img src="{% static '/squest/img/squest_logo_v2_300_300.png' %}" alt="squest_logo">
+    <div class="login-box">
+        <div class="login-logo">
+            <img src="{% static 'squest/img/squest_logo_v2_300_300.png' %}" alt="squest_logo">
         </div>
-        <div class="row justify-content-center align-items-center">
-            <div class="col-8">
-                <div class="card card-secondary">
-                    {% if password_enabled %}
+        <div class="card">
+            <div class="card-body login-card-body">
+                {% if password_enabled %}
                     <form class="form-horizontal" method="post" action="{% url 'login' %}">
                         {% csrf_token %}
-                        <div class="card-body">
-                            {% if login_helper_text %}
-                                <p class="login-box-msg">{{ login_helper_text | safe }}</p>
-                            {% endif %}
-                            {% if form.errors %}
-                                <p class="text-danger">Your username and password didn't match. Please try again.</p>
-                            {% endif %}
-                            <div class="form-group row">
-                                <label for="inputEmail3" class="col-sm-2 col-form-label">Username</label>
-                                <div class="col-sm-10">
-                                    <input name="username" type="text" class="form-control" id="inputEmail3" placeholder="Username" autocomplete="off"
-                                           style="">
-                                </div>
-                            </div>
-                            <div class="form-group row">
-                                <label for="inputPassword3" class="col-sm-2 col-form-label">Password</label>
-                                <div class="col-sm-10">
-                                    <input name="password" type="password" class="form-control" id="inputPassword3" placeholder="Password" autocomplete="off"
-                                           style="">
-                                </div>
+                        {% if login_helper_text %}
+                            <p class="login-box-msg">{{ login_helper_text | safe }}</p>
+                        {% endif %}
+                        {% if form.errors %}
+                            <p class="text-danger">Your username and password didn't match. Please try again.</p>
+                        {% endif %}
+                        <div class="mb-3">
+                            <label for="inputEmail3" class="form-label">Username</label>
+                            <input name="username" type="text" class="form-control" id="inputEmail3" placeholder="Username" autocomplete="off"
+                                   style="">
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputPassword3" class="form-label">Password</label>
+                            <input name="password" type="password" class="form-control" id="inputPassword3" placeholder="Password" autocomplete="off"
+                                   style="">
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn" style="background-color: #6ad3c2"><strong>Sign in</strong></button>
+                                <input type="hidden" name="next" value="{{ next }}">
                             </div>
                         </div>
-                        <!-- /.card-body -->
-                        <div class="card-footer">
-                            <button type="submit" class="btn" style="background-color: #6ad3c2"><strong>Sign in</strong></button>
-                            <input type="hidden" name="next" value="{{ next }}">
-                        </div>
-                        <!-- /.card-footer -->
                     </form>
-                    {% endif %}
-                    {% if openid_active %}
-                    <div class="card-footer">
-                        <div class="text-center">
-                            <a class="btn" style="background-color: #6ad3c2" href="{% url "social:begin" social_auth_backend %}" role="button"><strong>{{ openid_btn_text }}</strong></a>
-                        </div>
+                {% endif %}
+                {% if openid_active %}
+                    <div class="text-center mt-3">
+                        <a class="btn" style="background-color: #6ad3c2" href="{% url "social:begin" social_auth_backend %}" role="button"><strong>{{ openid_btn_text }}</strong></a>
                     </div>
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-
 {% endblock %}

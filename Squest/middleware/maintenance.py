@@ -16,7 +16,10 @@ class MaintenanceMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         squest_settings = SquestSettings.load()
-        if (settings.MAINTENANCE_MODE_ENABLED or squest_settings.maintenance_mode_enabled) and not request.user.is_superuser:
+        static_url = getattr(settings, "STATIC_URL", "") or ""
+        is_static_request = bool(static_url and request.path.startswith(static_url))
+        maintenance_enabled = settings.MAINTENANCE_MODE_ENABLED or squest_settings.maintenance_mode_enabled
+        if maintenance_enabled and not request.user.is_superuser and not is_static_request:
             if "/api/" in request.path:
                 content = {'maintenance_mode_enabled': True}
                 api_response = Response(content, status=HTTP_503_SERVICE_UNAVAILABLE)

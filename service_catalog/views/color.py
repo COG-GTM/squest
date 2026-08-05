@@ -2,6 +2,9 @@ from service_catalog.models import ApprovalState
 from service_catalog.models.instance import InstanceState
 from service_catalog.models.request import RequestState
 
+# State colors are used by both `text-*` and `text-bg-*`; keep every value
+# legible in both light and dark contexts. Custom orange, graphite, purple,
+# and teal utilities are defined in squest.css for distinct state mappings.
 map_dict_request_state = {
     RequestState.ACCEPTED: "primary",
     RequestState.ON_HOLD: "warning",
@@ -11,7 +14,7 @@ map_dict_request_state = {
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",
-    RequestState.ARCHIVED: "black"
+    RequestState.ARCHIVED: "graphite"
 }
 
 map_dict_instance_state = {
@@ -19,13 +22,13 @@ map_dict_instance_state = {
     InstanceState.PROVISIONING: "primary",
     InstanceState.PROVISION_FAILED: "warning",
     InstanceState.AVAILABLE: "success",
-    InstanceState.DELETE_FAILED: "warning",
-    InstanceState.DELETING: "primary",
-    InstanceState.UPDATING: "primary",
-    InstanceState.UPDATE_FAILED: "warning",
-    InstanceState.DELETED: "danger",
-    InstanceState.ARCHIVED: "dark",
-    InstanceState.ABORTED: "gray_dark",
+    InstanceState.DELETE_FAILED: "danger",
+    InstanceState.DELETING: "orange",
+    InstanceState.UPDATING: "info",
+    InstanceState.UPDATE_FAILED: "purple",
+    InstanceState.DELETED: "dark",
+    InstanceState.ARCHIVED: "graphite",
+    InstanceState.ABORTED: "teal",
 }
 
 map_dict_step_state = {
@@ -34,46 +37,22 @@ map_dict_step_state = {
     ApprovalState.PENDING: "primary",
 }
 
-map_class_to_color = {
-    "blue": "#007bff",
-    "indigo": "#6610f2",
-    "purple": "#6f42c1",
-    "pink": "#e83e8c",
-    "red": "#dc3545",
-    "orange": "#fd7e14",
-    "yellow": "#ffc107",
-    "green": "#28a745",
-    "teal": "#20c997",
-    "cyan": "#17a2b8",
-    "white": "#fff",
-    "gray": "#6c757d",
-    "gray - dark": "#343a40",
-    "primary": "#007bff",
-    "secondary": "#6c757d",
-    "success": "#28a745",
-    "info": "#17a2b8",
-    "warning": "#ffc107",
-    "danger": "#dc3545",
-    "light": "#f8f9fa",
-    "dark": "#343a40"
-}
-
 random_color = {
-    "blue": "#007bff",
+    "blue": "#0d6efd",
     "indigo": "#6610f2",
     "purple": "#6f42c1",
-    "pink": "#e83e8c",
+    "pink": "#d63384",
     "red": "#dc3545",
     "orange": "#fd7e14",
     "yellow": "#ffc107",
-    "green": "#28a745",
+    "green": "#198754",
     "teal": "#20c997",
-    "cyan": "#17a2b8",
+    "cyan": "#0dcaf0",
     "gray": "#6c757d",
-    "primary": "#007bff",
+    "primary": "#0d6efd",
     "secondary": "#6c757d",
-    "success": "#28a745",
-    "info": "#17a2b8",
+    "success": "#198754",
+    "info": "#0dcaf0",
     "warning": "#ffc107",
     "danger": "#dc3545",
     "light": "#f8f9fa"

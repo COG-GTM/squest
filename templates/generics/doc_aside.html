@@ -2,30 +2,26 @@
 
 {% if can_view_doc %}
     {% load martortags %}
-    {% for doc in docs %}
-
-        <div id="accordion_docs">
+    <div id="accordion_docs">
+        {% for doc in docs %}
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <button class="btn btn-link" data-toggle="collapse" data-target="#doc_{{ doc.id }}"
+                        <button class="btn btn-link" data-bs-toggle="collapse" data-bs-target="#doc_{{ doc.id }}"
                                 aria-controls="doc_{{ doc.id }}" title="Click to expand/collapse">
                             {{ doc.title }}
                         </button>
                     </h5>
                 </div>
 
-                <div id="doc_{{ doc.id }}"
-                     class="collapse {% if  expanded != False %}show{% endif %}"
-                     data-parent="#accordion_docs">
+                <div id="doc_{{ doc.id }}" class="collapse {% if expanded != False %}show{% endif %}">
                     <div class="card-body p-0">
-                        <div class="martor-preview{% if request.user.profile.theme == "dark" %} bg-dark{% endif %}">
+                        <div class="martor-preview">
                             {{ doc.content | safe_markdown }}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-    {% endfor %}
+        {% endfor %}
+    </div>
 {% endif %}

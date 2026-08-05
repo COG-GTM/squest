@@ -8,22 +8,22 @@
                         <h3 class="card-title">Details</h3>
                     </div>
                     <div class="card-body">
-                        <ul class="list-group list-group-unbordered mb-3">
+                        <ul class="list-group list-group-flush mb-3">
                             <li class="list-group-item border-top-0">
-                                <b>Name</b> <span class="float-right">{{ object.name }}</span>
+                                <b>Name</b> <span class="float-end">{{ object.name }}</span>
                             </li>
                             <li class="list-group-item">
                                 <b>Job template ID (Tower/AWX)</b> <a
                                     href="{{ object.tower_url }}"
-                                    class="float-right">{{ object.tower_id }}</a>
+                                    class="float-end">{{ object.tower_id }}</a>
                             </li>
                             <li class="list-group-item">
                                 <b>Tower server name</b> <a
                                     href="{% url 'service_catalog:jobtemplate_list' object.tower_server.id  %}"
-                                    class="float-right">{{ object.tower_server.name }}</a>
+                                    class="float-end">{{ object.tower_server.name }}</a>
                             </li>
                             <li class="list-group-item border-bottom-0">
-                                <b>Is compliant</b> <div class="float-right">{% include 'service_catalog/custom_columns/job_template_compliant.html' with record=object %}</div>
+                                <b>Is compliant</b> <div class="float-end">{% include 'service_catalog/custom_columns/job_template_compliant.html' with record=object %}</div>
                             </li>
                         </ul>
                     </div>
@@ -33,8 +33,8 @@
                 <div class="card">
                     <div class="card-header p-2">
                         <ul class="nav nav-pills squest-default-active" id="tabs">
-                            <li class="nav-item"><a class="nav-link" href="#survey" data-toggle="tab">Survey</a></li>
-                            <li class="nav-item"><a class="nav-link" href="#data" data-toggle="tab">Data</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#survey" data-bs-toggle="tab">Survey</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#data" data-bs-toggle="tab">Data</a></li>
                         </ul>
                     </div>
                     <div class="card-body">

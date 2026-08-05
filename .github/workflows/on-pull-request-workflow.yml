@@ -37,6 +37,15 @@ jobs:
           sudo apt install -y libuv1-dev
           sudo apt install -y default-libmysqlclient-dev gcc npm libldap2-dev libsasl2-dev graphviz libsqlite3-dev
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -54,6 +63,10 @@ jobs:
       - name: Run Tests
         run: |
           poetry run coverage run --source='.' manage.py test
+
+      - name: Check static references
+        run: |
+          poetry run python scripts/check_static_refs.py
 
       - name: Run coverage report
         run: |

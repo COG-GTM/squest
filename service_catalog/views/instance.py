@@ -343,7 +343,7 @@ def support_details(request, instance_id, pk):
     context = {
         'form': form,
         'instance': instance,
-        'messages': SupportMessage.objects.filter(support=support),
+        'comment_messages': SupportMessage.objects.filter(support=support),
         'support': support,
         'breadcrumbs': [
             {'text': 'Instances', 'url': reverse('service_catalog:instance_list')},

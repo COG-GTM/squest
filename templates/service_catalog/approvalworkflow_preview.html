@@ -32,7 +32,7 @@
 
                         <div>
                             {% for approval_step in object.approval_steps.all %}
-                                <div id="{{ approval_step.id }}" class="card card-default">
+                                <div id="{{ approval_step.id }}" class="card">
                                     <div class="card-header">
                                         <h3 class="card-title"><strong>{{ approval_step.name }}</strong></h3>
                                     </div>
@@ -53,13 +53,13 @@
                                             <dt class="col-sm-4">Read survey fields</dt>
                                             <dd class="col-sm-8">
                                                 {% for field in approval_step.readable_fields.all %}
-                                                    <span class="badge bg-secondary">{{ field.name }}</span>
+                                                    <span class="badge text-bg-secondary">{{ field.name }}</span>
                                                 {% endfor %}
                                             </dd>
                                             <dt class="col-sm-4">Write survey fields</dt>
                                             <dd class="col-sm-8">
                                                 {% for field in approval_step.editable_fields.all %}
-                                                    <span class="badge bg-primary">{{ field.name }}</span>
+                                                    <span class="badge text-bg-primary">{{ field.name }}</span>
                                                 {% endfor %}
                                             </dd>
                                             {% if approval_step.auto_accept_condition %}
@@ -85,10 +85,10 @@
                                             {% if can_add_role %}
                                                 <a href="{% url "profiles:role_create" %}" type="button"
                                                    class="btn btn-success"
-                                                   data-container="body"
-                                                   data-toggle="popover"
-                                                   data-placement="top"
-                                                   data-content="Add the permission {{ approval_step.permission.permission_str }} to your new role"
+                                                   data-bs-container="body"
+                                                   data-bs-toggle="popover"
+                                                   data-bs-placement="top"
+                                                   data-bs-content="Add the permission {{ approval_step.permission.permission_str }} to your new role"
                                                 >
                                                     Create new role
                                                 </a>
@@ -96,10 +96,10 @@
                                             {% if can_add_approvers %}
                                                 <a href="{{ scope.get_absolute_url }}role/create" type="button"
                                                    class="btn btn-primary"
-                                                   data-container="body"
-                                                   data-toggle="popover"
-                                                   data-placement="top"
-                                                   data-content="Assign related role to users to add new approvers"
+                                                   data-bs-container="body"
+                                                   data-bs-toggle="popover"
+                                                   data-bs-placement="top"
+                                                   data-bs-content="Assign related role to users to add new approvers"
                                                 >Add approvers</a>
                                             {% endif %}
                                         </div>
@@ -121,9 +121,4 @@
 {% endblock %}
 {% block custom_script %}
     <script>add_tab_management();</script>
-    <script>
-        $(function () {
-            $('[data-toggle="popover"]').popover()
-        })
-    </script>
 {% endblock %}

@@ -2,8 +2,7 @@
 {% load render_table from django_tables2 %}
 
 {% block main %}
-    <div class="content">
-        <div class="container-fluid">
+    <div class="container-fluid">
             {% if error_message %}
                 <div class="card card-{{ bootstrap_type }}">
                     <div class="card-header">
@@ -17,7 +16,7 @@
                     </div>
                     <div class="card-body">
                         {% if details.details_list %}
-                            <blockquote class="quote-warning">
+                            <blockquote class="border-start border-4 border-warning ps-3">
                                 <h5>Warning</h5>
                                 <p>{{ details.warning_sentence }}</p>
                                 <ul>
@@ -40,10 +39,5 @@
                     </div>
                 </div>
             {% endif %}
-        </div>
     </div>
-    {% load static %}
-    <script src="{% static 'admin-lte/plugins/daterangepicker/daterangepicker.js' %}"></script>
-    <script src="{% static 'admin-lte/plugins/moment/moment.min.js' %}"></script>
-    <script src="{% static 'admin-lte/plugins/tempusdominus-bootstrap-4/js/tempusdominus-bootstrap-4.js' %}"></script>
 {% endblock %}

@@ -1,6 +1,3 @@
-footer{
-    z-index: auto !important;
-}
 .card-img-top {
     width: 100%;
     height: 10vw;
@@ -81,11 +78,6 @@ div.dt-button-collection {
     z-index: 1;
 }
 
-aside {
-    min-height: 100vh
-}
-
-
 input.form-control[disabled] {
   cursor: not-allowed;
 }
@@ -96,4 +88,89 @@ input.form-control[disabled] {
 
 .callout a{
     color: unset;
+}
+
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-orange: #fd7e14;
+    --bs-orange-rgb: 253, 126, 20;
+    --bs-graphite: #495057;
+    --bs-graphite-rgb: 73, 80, 87;
+    --bs-purple: #6f42c1;
+    --bs-purple-rgb: 111, 66, 193;
+    --bs-teal: #0f766e;
+    --bs-teal-rgb: 15, 118, 110;
+}
+
+.bg-orange {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-orange-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.text-orange {
+    color: var(--bs-orange) !important;
+}
+
+.text-bg-orange {
+    color: #000 !important;
+    background-color: rgba(var(--bs-orange-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+.bg-graphite {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-graphite-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.text-graphite {
+    color: var(--bs-graphite) !important;
+}
+
+.text-bg-graphite {
+    color: #fff !important;
+    background-color: rgba(var(--bs-graphite-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+.bg-purple {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-purple-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.text-purple {
+    color: var(--bs-purple) !important;
+}
+
+.text-bg-purple {
+    color: #fff !important;
+    background-color: rgba(var(--bs-purple-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+.bg-teal {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-teal-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.text-teal {
+    color: var(--bs-teal) !important;
+}
+
+.text-bg-teal {
+    color: #fff !important;
+    background-color: rgba(var(--bs-teal-rgb), var(--bs-bg-opacity, 1)) !important;
+}
+
+[data-bs-theme="dark"] .text-graphite {
+    color: #ced4da !important;
+}
+
+[data-bs-theme="dark"] .text-dark {
+    color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .text-purple {
+    color: #b197fc !important;
+}
+
+[data-bs-theme="dark"] .text-teal {
+    color: #5eead4 !important;
 }

@@ -25,8 +25,8 @@ class CustomerRequestCommentTest(BaseTestRequest):
     def _assert_can_list_comment(self):
         response = self.client.get(self.create_url)
         self.assertEqual(200, response.status_code)
-        self.assertTrue("messages" in response.context)
-        self.assertEqual(1, len(response.context["messages"]))
+        self.assertTrue("comment_messages" in response.context)
+        self.assertEqual(1, len(response.context["comment_messages"]))
 
     def _assert_can_add_comment(self):
         number_message_before = RequestMessage.objects.filter(request=self.test_request).count()

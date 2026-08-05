@@ -192,7 +192,7 @@ class TowerSurveyField(SquestModel):
                     help_text=self.description,
                     choices=get_choices_as_tuples_list(self.field_options['choices'], []),
                     error_messages={'required': 'At least you must select one choice'},
-                    widget=FormsSelect(attrs={'class': 'form-control selectpicker', 'data-live-search': 'true'}),
+                    widget=FormsSelect(attrs={'class': 'selectpicker', 'data-live-search': 'true'}),
                 )
 
         elif self.type == "multiselect":
@@ -213,7 +213,7 @@ class TowerSurveyField(SquestModel):
                     help_text=self.description,
                     choices=get_choices_as_tuples_list(self.field_options['choices'], []),
                     widget=FormsSelectMultiple(
-                        attrs={'class': 'form-control selectpicker', 'data-live-search': 'true'}),
+                        attrs={'class': 'selectpicker', 'data-live-search': 'true'}),
                 )
 
         elif self.type == "integer":

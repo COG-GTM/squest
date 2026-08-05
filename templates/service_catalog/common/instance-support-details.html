@@ -3,98 +3,74 @@
     #{{ instance.id }} | Support
 {% endblock %}
 {% load static %}
-{% block content %}
+{% block extra_header_button %}
+    {% has_perm request.user "service_catalog.delete_support" instance as can_delete_support %}
+    {% if can_delete_support %}
+        <a href="{% url 'service_catalog:support_delete' instance_id=instance.id pk=support.id %}"
+           class="btn btn-danger">
+            <i class="fas fa-trash"></i>
+        </a>
+    {% endif %}
+    <span title="state"
+          class="badge text-bg-{{ support.state |map_support_state }} p-1 me-2">{{ support.get_state_display }}</span>
+{% endblock %}
+{% block main %}
     {% has_perm request.user "service_catalog.add_supportmessage" instance as can_comment_support %}
     {% has_perm request.user "service_catalog.reopen_support" instance as can_reopen_support %}
     {% has_perm request.user "service_catalog.close_support" instance as can_close_support %}
     {% has_perm request.user "service_catalog.change_support" instance as can_change_support %}
-    {% has_perm request.user "service_catalog.delete_support" instance as can_delete_support %}
-    <!-- Main content -->
-    <div class="content-wrapper">
-        <section class="content-header">
-            <div class="container-fluid">
-                <div class="row mb-2">
-                    <div class="col-sm-6">
-                        {% include "generics/breadcrumbs.html" %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12 h-100">
+                <div class="card">
+                    <div class="card-body">
+                        {% for message in comment_messages %}
+                            <div class="d-flex border-bottom py-3">
+                                <img class="rounded-circle flex-shrink-0" width="40" height="40" src="{% if message.sender.is_staff %}{% static 'squest/img/admin.png' %}{% else %}{% static 'squest/img/user.png' %}{% endif %}" alt="user image">
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <a href="#">{{ message.sender.username }}</a>
+                                        {% if can_comment_support and message.sender == request.user %}
+                                            <a title="Edit"
+                                               class="btn btn-primary"
+                                               href="{% url "service_catalog:supportmessage_edit" message.support.instance.id message.support.id message.id %}">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-secondary d-block">{{ message.last_update_date |squest_date_format }}</small>
+                                    {{ message.content|markdown }}
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
-                    <div class="col-sm-6">
-                        {% if can_delete_support %}
-                            <a href="{% url 'service_catalog:support_delete' instance_id=instance.id pk=support.id %}"
-                               class="float-sm-right btn btn-danger">
-                                <i class="fas fa-trash"></i>
+                    <div class="card-footer">
+                        {% if can_comment_support %}
+                            <form action="{% url 'service_catalog:support_details' instance_id=instance.id pk=support.id %}"
+                                  method="post" _lpchecked="1">{% csrf_token %}
+                                {{ form.as_p }}
+                                <div class="mb-3">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-comment"></i> Comment
+                                    </button>
+                                </div>
+                            </form>
+                        {% endif %}
+                        {% if support.get_state_display == "OPENED" and can_close_support %}
+                            <a href="{% url 'service_catalog:support_close' instance_id=instance.id pk=support.id %}"
+                               class="btn btn-danger">
+                                <i class="fas fa-times-circle"></i> Close
                             </a>
                         {% endif %}
-                        <span title="state"
-                              class="float-sm-right badge bg-{{ support.state |map_support_state }} p-1 mr-2">{{ support.get_state_display }}</span>
+                        {% if support.get_state_display == "CLOSED" and can_reopen_support %}
+                            <a href="{% url 'service_catalog:support_reopen' instance_id=instance.id pk=support.id %}"
+                               class="btn btn-success">
+                                <i class="fas fa-undo"></i> Re-open
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
-            </div><!-- /.container-fluid -->
-        </section>
-        <div class="content">
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-sm-12 h-100">
-                        <div class="card">
-                            <div class="card-body">
-                                {% for message in messages %}
-                                    <div class="post">
-                                        <div class="user-block">
-                                            <img class="img-circle img-bordered-sm" src="
-                                            {% if message.sender.is_staff %}{% static '/squest/img/admin.png' %}{% else %}{% static '/squest/img/user.png' %}{% endif %}"
-                                                 alt="user image">
-                                            <span class="username">
-                                                <a href="#">{{ message.sender.username }}</a>
-                                                {% if can_comment_support and message.sender == request.user %}
-                                                    <a title="Edit"
-                                                       class="btn btn-primary float-right"
-                                                       href="{% url "service_catalog:supportmessage_edit" message.support.instance.id message.support.id message.id %}">
-                                                        <i class="fas fa-pencil-alt"></i>
-                                                    </a>
-                                                {% endif %}
-                                            </span>
-                                            <span class="description">{{ message.last_update_date |squest_date_format }}</span>
-                                        </div>
-                                        <!-- /.user-block -->
-                                        <p>
-                                            {{ message.content|markdown }}
-                                        </p>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <div class="card-footer">
-                                {% if can_comment_support %}
-                                    <form action="{% url 'service_catalog:support_details' instance_id=instance.id pk=support.id %}"
-                                          method="post" _lpchecked="1">{% csrf_token %}
-                                        {{ form.as_p }}
-                                        <div class="form-group">
-                                            <div class="col-sm-offset-2 col-sm-10">
-                                                <!-- validate button -->
-                                                <button class="btn btn-primary"
-                                                        type="submit">
-                                                    <i class="fas fa-comment"></i> Comment
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                {% endif %}
-                                {% if support.get_state_display == "OPENED" and can_close_support %}
-                                    <a href="{% url 'service_catalog:support_close' instance_id=instance.id pk=support.id %}"
-                                       class="btn btn-danger">
-                                        <i class="fas fa-times-circle"></i> Close
-                                    </a>
-                                {% endif %}
-                                {% if support.get_state_display == "CLOSED" and can_reopen_support %}
-                                    <a href="{% url 'service_catalog:support_reopen' instance_id=instance.id pk=support.id %}"
-                                       class="btn btn-success">
-                                        <i class="fas fa-undo"></i> Re-open
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div><!-- /.container-fluid -->
-
+            </div>
         </div>
     </div>
 {% endblock %}

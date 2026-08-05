@@ -35,21 +35,21 @@
                     </div>
                     <div class="card-body pt-0 pb-0">
 
-                        <ul class="list-group list-group-unbordered">
-                            <li class="list-group-item border-top-0 border-bottom-0">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
                                 <strong>Organization</strong><br>
                                 <a href="{{ object.org.get_absolute_url }}">{{ object.org }}</a>
                             </li>
                             {% if object.description %}
-                                <li class="list-group-item border-top-0 border-bottom-0">
+                                <li class="list-group-item">
                                     <strong>Description</strong><br>
                                     {{ object.description }}
                                 </li>
                             {% endif %}
-                            <li class="list-group-item border-top-0 border-bottom-0">
+                            <li class="list-group-item">
                                 <a href="{% url 'service_catalog:instance_list' %}?quota_scope={{ object.id }}">View instances</a>
                             </li>
-                            <li class="list-group-item border-top-0 border-bottom-0">
+                            <li class="list-group-item">
                                 <a href="{% url 'service_catalog:request_list' %}?instance__quota_scope={{ object.id }}">View requests</a>
                             </li>
                         </ul>
@@ -62,20 +62,20 @@
                         <ul class="nav nav-pills squest-default-active" id="tabs">
                             {% if quotas %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#quotas" data-toggle="tab">Quotas</a>
+                                    <a class="nav-link" href="#quotas" data-bs-toggle="tab">Quotas</a>
                                 </li>
                             {% endif %}
                             <li class="nav-item">
-                                <a class="nav-link" href="#roles" data-toggle="tab">Roles</a>
+                                <a class="nav-link" href="#roles" data-bs-toggle="tab">Roles</a>
                             </li>
                             {% if users %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#users" data-toggle="tab">Users</a>
+                                    <a class="nav-link" href="#users" data-bs-toggle="tab">Users</a>
                                 </li>
                             {% endif %}
                             {% if workflows %}
                                 <li class="nav-item">
-                                    <a class="nav-link" href="#workflows" data-toggle="tab">Workflows</a>
+                                    <a class="nav-link" href="#workflows" data-bs-toggle="tab">Workflows</a>
                                 </li>
                             {% endif %}
                         </ul>

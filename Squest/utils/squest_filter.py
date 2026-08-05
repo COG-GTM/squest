@@ -33,10 +33,10 @@ class SquestFilter(FilterSet):
                     current_filter.lookup_expr = 'exact'
             elif isinstance(current_filter.field.widget, Select) or isinstance(current_filter.field.widget,
                                                                                SelectMultiple):
-                current_filter.field.widget.attrs['class'] = 'form-control selectpicker'
+                current_filter.field.widget.attrs['class'] = 'selectpicker'
                 current_filter.field.widget.attrs['data-live-search'] = 'true'
             elif isinstance(current_filter.field.widget, CheckboxInput):
-                current_filter.field.widget.attrs['class'] = 'form-control-checkbox'
+                current_filter.field.widget.attrs['class'] = 'form-check-input'
             else:
                 current_filter.field.widget.attrs['class'] = 'form-control'
 
