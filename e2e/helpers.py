@@ -136,9 +136,10 @@ def expect_message(page: Page, text: str) -> None:
     expect(page.locator("#django_message_container")).to_contain_text(text)
 
 
-# ``generics/form_edit.html`` renders the form errors in an alert that is a sibling of the form, not
-# a descendant of it
-FORM_ERRORS = ".card-body .alert-danger"
+# ``generics/form_edit.html`` renders the form errors in an alert that is a sibling of the form, not a
+# descendant of it, so the locator has to reach out of the form — but only as far as the card body
+# holding it, or an unrelated danger alert on the page (a compliancy warning) would read as a form error
+FORM_ERRORS = ".card-body:has(form) > .alert-danger"
 
 
 def expect_no_form_error(page: Page) -> None:

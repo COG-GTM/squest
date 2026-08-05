@@ -137,12 +137,16 @@ def test_an_aap_server_whose_token_is_refused_is_not_created(admin_page, base_ur
     """The other side of the stubbed boundary: a controller refusing a token surfaces as a form error."""
     admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
     admin_page.get_by_role("link", name="Add", exact=True).click()
-    admin_page.fill("input[name='name']", f"Refused AAP {uuid.uuid4().hex[:8]}")
+    name = f"Refused AAP {uuid.uuid4().hex[:8]}"
+    admin_page.fill("input[name='name']", name)
     admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
     admin_page.fill("input[name='token']", AUTH_FAILURE_TOKEN)
     submit_form(admin_page)
 
     expect_form_error(admin_page, "Fail to authenticate with provided token")
+    # the error alone would also be satisfied by a form that saves the server and then complains
+    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    expect_table_does_not_contain(admin_page, name)
 
 
 def test_scoped_user_cannot_reach_the_administration_pages(scoped_user_page, base_url):

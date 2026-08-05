@@ -101,9 +101,17 @@ def _free_port():
 
 
 def _secrets_of(environment):
+    """Every string that must not survive into the log, in the forms Squest can print it in.
+
+    ``print(os.environ)`` renders its values through ``repr``, so a password holding a quote, a
+    backslash or a newline reaches the log escaped and would walk straight past a replacement of the
+    raw value. Both spellings are scrubbed.
+    """
+    values = {value for key, value in environment.items()
+              if value and SECRET_ENVIRONMENT_KEY_PATTERN.search(key)}
+    escaped = {repr(value)[1:-1] for value in values}
     # longest first, so a secret containing another one does not leave its tail behind
-    return sorted({value for key, value in environment.items()
-                   if value and SECRET_ENVIRONMENT_KEY_PATTERN.search(key)}, key=len, reverse=True)
+    return sorted(values | escaped, key=len, reverse=True)
 
 
 def _pump_redacted(stream, log_file, secrets):
@@ -228,9 +236,10 @@ def _database_exists(environment):
 def _database_is_seeded(environment):
     """Whether the database holds the demo data, rather than only existing.
 
-    A run interrupted between ``_recreate_database`` and ``insert_demo_data`` leaves an empty schema
-    behind, and an ``E2E_REUSE_DB`` re-run against that would fail one spec at a time on missing demo
-    objects instead of saying what is wrong.
+    A run interrupted between ``_recreate_database`` and ``insert_demo_data`` leaves an empty or half
+    seeded schema behind, and an ``E2E_REUSE_DB`` re-run against that would fail one spec at a time on
+    missing demo objects instead of saying what is wrong. The marker is a demo user rather than any
+    user, because ``insert_default_data`` creates ``admin`` one command before the demo data.
     """
     import MySQLdb
 
@@ -239,7 +248,7 @@ def _database_is_seeded(environment):
     with _mysql_connection(environment) as connection:
         cursor = connection.cursor()
         try:
-            cursor.execute(f"SELECT COUNT(*) FROM {E2E_DB_DATABASE}.auth_user")
+            cursor.execute(f"SELECT COUNT(*) FROM {E2E_DB_DATABASE}.auth_user WHERE username = 'bob'")
         except MySQLdb.Error:
             return False
         return cursor.fetchone()[0] > 0
