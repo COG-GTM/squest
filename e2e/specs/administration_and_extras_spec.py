@@ -17,7 +17,7 @@ from playwright.sync_api import Page, expect
 
 from e2e.aap_stub.fake_tower import AUTH_FAILURE_TOKEN
 from e2e.helpers import NAV_MAP, expect_message, expect_no_form_error, goto_sidebar_entry, \
-    expect_form_error, expect_table_does_not_contain, submit_form, table_row as helper_table_row, \
+    expect_form_error, submit_form, table_row as helper_table_row, \
     visible_sidebar_entries
 
 COMPLIANT_JOB_TEMPLATE = "Deploy virtual machine"
@@ -94,7 +94,7 @@ def _table_row(page: Page, text: str):
 
 def _expect_no_row(page: Page, text: str) -> None:
     """Asserts no matching row exists on any page of a reused-DB list."""
-    first_link = page.locator("ul.pagination li a").filter(has_text="1").first
+    first_link = page.locator("ul.pagination").get_by_role("link", name="1", exact=True)
     if first_link.count():
         first_link.click()
         page.wait_for_load_state()
@@ -250,7 +250,7 @@ def test_announcement_can_be_edited_and_deleted(admin_page):
     expect(admin_page.locator("body")).to_contain_text("Confirm deletion of")
     submit_form(admin_page, "Confirm")
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    expect_table_does_not_contain(admin_page, edited)
+    _expect_no_row(admin_page, edited)
 
 
 def _create_announcement(page: Page, title: str, message: str) -> None:
@@ -295,8 +295,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     goto_sidebar_entry(admin_page, "Custom links")
     _delete_row(admin_page, name)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    # The list is genuinely empty after deletion, so Squest does not render custom_link_table.
-    expect(admin_page.locator("body")).not_to_contain_text(name)
+    _expect_no_row(admin_page, name)
 
     scoped_user_page.reload()
     expect(scoped_user_page.locator(".btn-toolbar")).not_to_contain_text(text)
@@ -328,8 +327,7 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page):
 
     _delete_row(admin_page, name)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    # The list is genuinely empty after deletion, so Squest does not render global_hook_table.
-    expect(admin_page.locator("body")).not_to_contain_text(name)
+    _expect_no_row(admin_page, name)
 
 
 def test_instance_hook_is_created_listed_edited_and_deleted(admin_page):
@@ -359,8 +357,7 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page):
 
     _delete_row(admin_page, renamed)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    # The list is genuinely empty after deletion, so Squest does not render global_hook_table.
-    expect(admin_page.locator("body")).not_to_contain_text(renamed)
+    _expect_no_row(admin_page, renamed)
 
 
 def _create_email_template(page: Page, name: str, title: str, content: str) -> None:
