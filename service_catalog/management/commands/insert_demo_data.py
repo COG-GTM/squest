@@ -1,7 +1,10 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management import BaseCommand, CommandError
+from django.db import transaction
+from django.utils import timezone
 
 from profiles.models import Organization, Quota, Role, Scope, Team
 from resource_tracker_v2.models import AttributeDefinition, ResourceGroup, Transformer
@@ -59,7 +62,20 @@ class Command(BaseCommand):
         "databases only: rows are matched by name, and every demo user gets their username as password."
     )
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Allow seeding when DEBUG is disabled (the demo users have guessable passwords)",
+        )
+
+    @transaction.atomic
     def handle(self, *args, **options):
+        if not settings.DEBUG and not options["force"]:
+            raise CommandError(
+                "DEBUG is disabled, which usually means this is not a demo deployment. This command creates users "
+                "whose password is their username; pass --force if that is really what you want here."
+            )
         print("[insert_demo_data] Start")
         users = self.create_users()
         job_template = self.create_tower()
@@ -90,7 +106,13 @@ class Command(BaseCommand):
         job_template, _ = JobTemplate.objects.get_or_create(
             name="Deploy virtual machine",
             tower_server=tower,
-            defaults={"survey": {"spec": DEMO_SURVEY}, "tower_id": 1, "tower_job_template_data": dict()},
+            defaults={
+                "survey": {"spec": DEMO_SURVEY},
+                "tower_id": 1,
+                # a real sync computes these; without them the demo template renders as non compliant
+                "tower_job_template_data": {"ask_variables_on_launch": True},
+                "is_compliant": True,
+            },
         )
         return job_template
 
@@ -128,6 +150,7 @@ class Command(BaseCommand):
                 defaults={"job_template": job_template, "process_timeout_second": 30},
             )
             update_operation.update_survey()
+            service.refresh_from_db()  # creating the CREATE operation already enables the service
             if not service.enabled:
                 service.enabled = True
                 service.save()
@@ -137,7 +160,8 @@ class Command(BaseCommand):
     def create_scopes(self, users):
         squest_user_role = Role.objects.filter(name="Squest user").first()
         if squest_user_role is None:
-            raise CommandError("Role 'Squest user' not found. Run 'manage.py insert_default_data' first.")
+            # the default roles are created by the profiles post_migrate hook
+            raise CommandError("Role 'Squest user' not found. Run 'manage.py migrate' first.")
         scopes = {}
         for org_name, team_names in [("Platform Engineering", ["SRE", "Data"]), ("Marketing", ["Web"])]:
             org, _ = Organization.objects.get_or_create(name=org_name)
@@ -165,7 +189,7 @@ class Command(BaseCommand):
             ("analytics-ns", "Kubernetes namespace", "Platform Engineering/Data", users["bob"],
              InstanceState.PROVISIONING),
             ("reporting-db", "PostgreSQL database", "Platform Engineering/Data", users["alice"],
-             InstanceState.AVAILABLE),
+             InstanceState.PENDING),  # its create request is still on hold
             ("campaign-site", "Virtual machine", "Marketing/Web", users["carol"], InstanceState.PENDING),
         ]
         for name, service_name, scope_name, requester, state in instance_specs:
@@ -188,7 +212,7 @@ class Command(BaseCommand):
         request_specs = [
             ("web-frontend-01", RequestState.COMPLETE, users["alice"]),
             ("web-frontend-02", RequestState.COMPLETE, users["alice"]),
-            ("batch-worker-01", RequestState.ACCEPTED, users["bob"]),
+            ("batch-worker-01", RequestState.COMPLETE, users["bob"]),
             ("analytics-ns", RequestState.PROCESSING, users["bob"]),
             ("reporting-db", RequestState.ON_HOLD, users["alice"]),
             ("campaign-site", RequestState.SUBMITTED, users["carol"]),
@@ -206,6 +230,9 @@ class Command(BaseCommand):
             )
             if created:
                 request.state = state
+                if state == RequestState.COMPLETE:
+                    # normally set by the FSM transition, and the request page hides the field without it
+                    request.date_complete = timezone.now()
                 request.save()
 
     def create_supports(self, instances, users):
