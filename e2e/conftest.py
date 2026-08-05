@@ -19,6 +19,7 @@ import tempfile
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -44,6 +45,10 @@ DEFAULT_EXPECT_TIMEOUT_MS = 15_000
 PASSTHROUGH_ENVIRONMENT_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TZ", "VIRTUAL_ENV", "DB_HOST", "DB_PORT",
                                 "DB_USER", "DB_PASSWORD", "REDIS_CACHE_HOST", "REDIS_CACHE_PORT",
                                 "REDIS_CACHE_PASSWORD", "RABBITMQ_HOST", "RABBITMQ_PORT"]
+# ... and the values of these are scrubbed out of the log on the way in, because that environment dump
+# would otherwise put the infrastructure passwords in a file a CI job may keep as an artifact
+SECRET_ENVIRONMENT_KEYS = ["DB_PASSWORD", "REDIS_CACHE_PASSWORD", "RABBITMQ_PASSWORD"]
+REDACTED = "***redacted by the e2e harness***"
 
 expect.set_options(timeout=DEFAULT_EXPECT_TIMEOUT_MS)
 
@@ -54,11 +59,28 @@ def _free_port():
         return sock.getsockname()[1]
 
 
+def _secrets_of(environment):
+    return [environment[key] for key in SECRET_ENVIRONMENT_KEYS if environment.get(key)]
+
+
+def _pump_redacted(stream, log_file, secrets):
+    """Copies a subprocess' output into the log with the infrastructure passwords scrubbed out."""
+    for line in stream:
+        for secret in secrets:
+            line = line.replace(secret, REDACTED)
+        log_file.write(line)
+        log_file.flush()
+
+
 def _run_management_command(*arguments, environment, log_file):
     command = [sys.executable, "manage.py", *arguments]
     log_file.write(f"\n$ {' '.join(command)}\n")
     log_file.flush()
-    subprocess.run(command, cwd=REPO_ROOT, env=environment, stdout=log_file, stderr=subprocess.STDOUT, check=True)
+    process = subprocess.Popen(command, cwd=REPO_ROOT, env=environment, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, text=True)
+    _pump_redacted(process.stdout, log_file, _secrets_of(environment))
+    if process.wait() != 0:
+        raise RuntimeError(f"'{' '.join(arguments)}' failed with {process.returncode}. See the log.")
 
 
 @pytest.fixture(scope="session")
@@ -169,8 +191,11 @@ def live_server(seeded_database, squest_environment, server_log_path):
     with server_log_path.open("a") as log_file:
         server = subprocess.Popen(
             [sys.executable, "manage.py", "runserver", "--noreload", f"127.0.0.1:{port}"],
-            cwd=REPO_ROOT, env=environment, stdout=log_file, stderr=subprocess.STDOUT,
+            cwd=REPO_ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
         )
+        log_pump = threading.Thread(target=_pump_redacted,
+                                    args=(server.stdout, log_file, _secrets_of(environment)), daemon=True)
+        log_pump.start()
         try:
             _wait_until_serving(server, base_url, server_log_path)
             yield base_url
@@ -181,6 +206,8 @@ def live_server(seeded_database, squest_environment, server_log_path):
             except subprocess.TimeoutExpired:
                 server.kill()
                 server.wait()
+            # before the log file is closed under it
+            log_pump.join(timeout=10)
 
 
 def _wait_until_serving(server, base_url, server_log_path):
