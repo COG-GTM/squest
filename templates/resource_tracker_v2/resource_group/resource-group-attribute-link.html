@@ -55,8 +55,6 @@
     <script src="{% static 'squest/js/resource_group_attributes.js' %}"></script>
     <script>
         $(function () {
-            // The shared scripts load after this block; reset is safe before selectpicker initializes.
-            load_resource_group_attributes();
             $("#id_consume_from_resource_group").change(function () {
                 load_resource_group_attributes($(this).val());
             });

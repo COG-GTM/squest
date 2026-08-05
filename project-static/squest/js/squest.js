@@ -28,7 +28,6 @@ function showToast({title, body, class: toastClass = '', autohide = true, delay 
 
 $(document).ready(function () {
 
-
     // iterate on all tab panes
     // add #id to all href in all links under tab-pane
     $(".tab-pane").each(

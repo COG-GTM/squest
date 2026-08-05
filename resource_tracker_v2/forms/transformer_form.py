@@ -29,7 +29,8 @@ class TransformerForm(SquestModelForm):
                                                                    queryset=AttributeDefinition.objects.filter(id=self.instance.attribute_definition.id),
                                                                    disabled=True,
                                                                    initial=self.instance.attribute_definition,
-                                                                   widget=forms.Select(attrs={'class': 'form-control'}))
+                                                                   widget=forms.Select(attrs={'class': 'selectpicker',
+                                                                                              'data-live-search': 'true'}))
         else:  # mode create
             self.fields['attribute_definition'] = ModelChoiceField(label="Attribute",
                                                                    required=True,
@@ -39,12 +40,14 @@ class TransformerForm(SquestModelForm):
         self.fields['consume_from_resource_group'] = ModelChoiceField(label="Resource group to consume",
                                                                       required=False,
                                                                       queryset=all_resource_group_except_current.all(),
-                                                                      widget=forms.Select(attrs={'class': 'form-control'}))
+                                                                      widget=forms.Select(attrs={'class': 'selectpicker',
+                                                                                                 'data-live-search': 'true'}))
 
         self.fields['consume_from_attribute_definition'] = ModelChoiceField(label="Attribute to consume",
                                                                             required=False,
                                                                             queryset=available_attribute.all(),
-                                                                            widget=forms.Select(attrs={'class': 'form-control'}))
+                                                                            widget=forms.Select(attrs={'class': 'selectpicker',
+                                                                                                       'data-live-search': 'true'}))
         if self.instance.pk is not None and self.instance.consume_from_attribute_definition is not None:
             target_transformer = Transformer.objects.filter(resource_group=self.instance.consume_from_resource_group)
             self.fields['consume_from_attribute_definition'].choices = [(transformer.attribute_definition.id,
