@@ -12,12 +12,16 @@ units, this suite covers the flows a user actually walks through.
 | `seeded_database` | `test_squest_db`, dropped, migrated and seeded with `insert_default_data` + `insert_demo_data` |
 | `admin_page` | a page signed in as `admin` (superuser) |
 | `scoped_user_page` | a page signed in as `bob`, a non admin with the "Squest user" role on the "Platform Engineering" org and its "SRE" team. Its own browser context |
-| `login_as` | `login_as("carol")` opens another signed in page, to drive two users in one test |
+| `login_as` | `login_as("carol")` opens another signed in page in its own browser context, to drive two users in one test |
 
 The RHAAP/AWX boundary is stubbed in process by `e2e/aap_stub`: `e2e.settings_e2e` installs an app
 whose `ready()` points `TowerServer.get_tower_instance()` and the `Tower` constructor of
-`TowerServerForm` at `FakeTower`. Job template sync, token validation and job launch therefore work
-with no controller and no change to Squest's own code. Squest's code is never patched from a spec.
+`TowerServerForm` at `FakeTower`. Job template sync, token validation, job launch and job status
+polling therefore work with no controller and no change to Squest's own code. Squest's code is never
+patched from a spec. The stub serves two job templates, `Deploy virtual machine` (with a survey) and
+`Decommission virtual machine` (deliberately not compliant: `ask_variables_on_launch` is false), a
+launched job reports itself as `successful`, and the token `AUTH_FAILURE_TOKEN` is refused so a spec
+can walk the "Fail to authenticate with provided token" branch of `TowerServerForm`.
 
 The demo seed (see `service_catalog/management/commands/insert_demo_data.py`) gives you: users
 `admin`/`alice`/`bob`/`carol` (password = username), the "Infrastructure" and "Databases" portfolios,
@@ -39,7 +43,10 @@ E2E_REUSE_DB=1 poetry run pytest -k instance         # keep the seeded database:
 
 `E2E_DB_DATABASE` overrides the database name (`test_squest_db` by default: the mariadb container
 grants `squest_user` on it, and the Django test runner recreates it anyway, so the suite can own it
-without touching the dev database).
+without touching the dev database). That database is dropped and recreated at the start of a run, so
+a session holds an exclusive lock on it for its whole duration: a second `pytest` on the same
+machine waits for the first one instead of pulling the database out from under it. To run two suites
+at the same time, give them different `E2E_DB_DATABASE` values.
 
 ## Writing a spec
 

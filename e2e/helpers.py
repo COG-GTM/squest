@@ -3,7 +3,9 @@
 Everything here is about Squest's shell (AdminLTE sidebar, django-tables2 lists, the generic
 form/confirm templates), so a spec only has to describe the flow it covers.
 """
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
+
+SUBMIT_NAVIGATION_TIMEOUT_MS = 15_000
 
 # The critical flow surface, derived from ``generate_sidebar`` in
 # ``profiles/templatetags/squest_utils.py``: sidebar group -> entry -> URL path. Sub entries of a
@@ -78,8 +80,8 @@ def sidebar_href(page: Page, name: str) -> str:
 
 def goto_sidebar_entry(page: Page, name: str) -> None:
     """Navigates the way a user does: through the sidebar, not through a URL."""
-    sidebar_entry(page, name).first.click()
-    page.wait_for_load_state()
+    with page.expect_navigation():
+        sidebar_entry(page, name).first.click()
 
 
 def visible_sidebar_entries(page: Page) -> list[str]:
@@ -95,8 +97,18 @@ def expect_message(page: Page, text: str) -> None:
     expect(page.locator("#django_message_container")).to_contain_text(text)
 
 
+# ``generics/form_edit.html`` renders the form errors in an alert that is a sibling of the form, not
+# a descendant of it
+FORM_ERRORS = ".card-body .alert-danger"
+
+
 def expect_no_form_error(page: Page) -> None:
-    expect(page.locator("form .alert-danger")).to_have_count(0)
+    expect(page.locator(FORM_ERRORS)).to_have_count(0)
+
+
+def expect_form_error(page: Page, text: str) -> None:
+    """The form came back with ``text`` in its error alert, e.g. a rejected field value."""
+    expect(page.locator(FORM_ERRORS)).to_contain_text(text)
 
 
 def table_rows(page: Page):
@@ -113,16 +125,28 @@ def expect_table_contains(page: Page, text: str) -> None:
 
 
 def expect_table_does_not_contain(page: Page, text: str) -> None:
-    expect(page.locator("body")).not_to_contain_text(text)
+    """No row of the list holds ``text``: how a scope boundary shows up to a user.
+
+    Pair it with a positive assertion (``expect_table_contains``) so that a list which failed to
+    render at all cannot satisfy it.
+    """
+    expect(table_row(page, text)).to_have_count(0)
 
 
 def submit_form(page: Page, label: str = None) -> None:
-    """Submits the generic form/confirm template, optionally picking a named button."""
-    if label is None:
-        page.locator("form button[type='submit']").first.click()
-    else:
-        page.locator("form").get_by_role("button", name=label).first.click()
-    page.wait_for_load_state()
+    """Submits the generic form/confirm template, optionally picking a named button.
+
+    Waits for the navigation the submit triggers, so that an assertion right after it cannot be
+    satisfied by the page the form was submitted from. A form that answers without navigating (an
+    in page error, an ajax submit) is not an error here: the assertions in the spec decide.
+    """
+    button = page.locator("form button[type='submit']").first if label is None \
+        else page.locator("form").get_by_role("button", name=label).first
+    try:
+        with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
+            button.click()
+    except PlaywrightTimeoutError:
+        pass
 
 
 def expect_permission_denied(page: Page) -> None:

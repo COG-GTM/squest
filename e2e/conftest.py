@@ -12,7 +12,10 @@ Session scoped fixtures do the expensive work once per ``pytest`` run:
 Set ``E2E_REUSE_DB=1`` to keep the database from the previous run (skips drop/migrate/seed), which
 turns a re-run of a single spec into a couple of seconds.
 """
+import contextlib
+import fcntl
 import os
+import tempfile
 import socket
 import subprocess
 import sys
@@ -25,13 +28,15 @@ import pytest
 from playwright.sync_api import Browser, Page, expect
 
 from e2e.helpers import login
+from service_catalog.utils import str_to_bool
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # the mariadb container grants squest_user on this database only, and the Django test runner recreates
 # it from scratch, so the end to end suite can own it without colliding with the dev database
 E2E_DB_DATABASE = os.environ.get("E2E_DB_DATABASE", "test_squest_db")
-E2E_REUSE_DB = os.environ.get("E2E_REUSE_DB", "") not in ("", "0", "false", "False")
+E2E_REUSE_DB = str_to_bool(os.environ.get("E2E_REUSE_DB", "False"))
 SERVER_START_TIMEOUT_SECONDS = 120
+DATABASE_LOCK_TIMEOUT_SECONDS = 1800
 DEFAULT_EXPECT_TIMEOUT_MS = 15_000
 
 # Squest prints the whole environment at startup, so the server is started from an allow list
@@ -82,17 +87,65 @@ def server_log_path(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def seeded_database(squest_environment, server_log_path):
-    """A migrated database holding the demo data: admin, alice, bob, carol, catalog, instances, quotas."""
-    with server_log_path.open("w") as log_file:
-        if not E2E_REUSE_DB:
-            _recreate_database(squest_environment)
-            _run_management_command("migrate", "--noinput", environment=squest_environment, log_file=log_file)
-            _run_management_command("insert_default_data", environment=squest_environment, log_file=log_file)
-            _run_management_command("insert_demo_data", environment=squest_environment, log_file=log_file)
-    return E2E_DB_DATABASE
+    """A migrated database holding the demo data: admin, alice, bob, carol, catalog, instances, quotas.
+
+    The database name is shared by every run in this checkout and is recreated from scratch, so the
+    whole session holds an exclusive lock on it: a second ``pytest`` started on the same machine
+    waits instead of dropping the database under the first one. Give the runs different
+    ``E2E_DB_DATABASE`` values to have them run at the same time.
+    """
+    with _database_lock():
+        with server_log_path.open("w") as log_file:
+            if E2E_REUSE_DB:
+                if not _database_exists(squest_environment):
+                    raise RuntimeError(f"E2E_REUSE_DB is set but the '{E2E_DB_DATABASE}' database does not exist "
+                                       f"yet. Run once without E2E_REUSE_DB to create and seed it.")
+            else:
+                _recreate_database(squest_environment)
+                _run_management_command("migrate", "--noinput", environment=squest_environment, log_file=log_file)
+                _run_management_command("insert_default_data", environment=squest_environment, log_file=log_file)
+                _run_management_command("insert_demo_data", environment=squest_environment, log_file=log_file)
+        yield E2E_DB_DATABASE
+
+
+@contextlib.contextmanager
+def _database_lock():
+    lock_path = Path(tempfile.gettempdir()) / f"squest-e2e-{E2E_DB_DATABASE}.lock"
+    with lock_path.open("w") as lock_file:
+        deadline = time.monotonic() + DATABASE_LOCK_TIMEOUT_SECONDS
+        while True:
+            try:
+                fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() > deadline:
+                    raise RuntimeError(f"Another end to end run has been holding '{E2E_DB_DATABASE}' for more than "
+                                       f"{DATABASE_LOCK_TIMEOUT_SECONDS}s ({lock_path}). Set E2E_DB_DATABASE to run "
+                                       f"both at the same time.")
+                time.sleep(1)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+
+def _database_exists(environment):
+    with _mysql_connection(environment) as connection:
+        cursor = connection.cursor()
+        cursor.execute("SHOW DATABASES LIKE %s", (E2E_DB_DATABASE,))
+        return cursor.fetchone() is not None
 
 
 def _recreate_database(environment):
+    with _mysql_connection(environment) as connection:
+        cursor = connection.cursor()
+        cursor.execute(f"DROP DATABASE IF EXISTS {E2E_DB_DATABASE}")
+        cursor.execute(f"CREATE DATABASE {E2E_DB_DATABASE} CHARACTER SET utf8mb4")
+        connection.commit()
+
+
+@contextlib.contextmanager
+def _mysql_connection(environment):
     import MySQLdb
 
     connection = MySQLdb.connect(
@@ -102,10 +155,7 @@ def _recreate_database(environment):
         passwd=environment.get("DB_PASSWORD", "squest_password"),
     )
     try:
-        cursor = connection.cursor()
-        cursor.execute(f"DROP DATABASE IF EXISTS {E2E_DB_DATABASE}")
-        cursor.execute(f"CREATE DATABASE {E2E_DB_DATABASE} CHARACTER SET utf8mb4")
-        connection.commit()
+        yield connection
     finally:
         connection.close()
 
@@ -130,6 +180,7 @@ def live_server(seeded_database, squest_environment, server_log_path):
                 server.wait(timeout=30)
             except subprocess.TimeoutExpired:
                 server.kill()
+                server.wait()
 
 
 def _wait_until_serving(server, base_url, server_log_path):
@@ -143,7 +194,8 @@ def _wait_until_serving(server, base_url, server_log_path):
                 if response.status == 200:
                     return
         except (urllib.error.URLError, ConnectionError, socket.timeout):
-            time.sleep(0.5)
+            pass
+        time.sleep(0.5)
     raise RuntimeError(f"The Squest dev server did not answer on {base_url} within "
                        f"{SERVER_START_TIMEOUT_SECONDS}s. Log: {server_log_path}")
 
@@ -155,16 +207,26 @@ def base_url(live_server):
 
 
 @pytest.fixture
-def login_as(context, base_url):
+def login_as(browser: Browser, browser_context_args, base_url):
     """Returns a callable opening a new logged in page: ``login_as('bob')``.
+
+    Every user gets its own browser context: a context has a single cookie jar, so signing a second
+    user in through the ``page`` context would replace the first one's Django session and the spec
+    would quietly drive whoever signed in last.
 
     The demo users all have their username as password, so the password is optional.
     """
+    contexts = []
+
     def _login_as(username, password=None):
+        context = browser.new_context(**dict(browser_context_args, base_url=base_url))
+        contexts.append(context)
         page = context.new_page()
         login(page, base_url, username, password or username)
         return page
-    return _login_as
+    yield _login_as
+    for context in contexts:
+        context.close()
 
 
 @pytest.fixture
@@ -175,7 +237,7 @@ def admin_page(page, base_url) -> Page:
 
 
 @pytest.fixture
-def scoped_user_page(browser: Browser, base_url) -> Page:
+def scoped_user_page(browser: Browser, browser_context_args, base_url) -> Page:
     """A page logged in as ``bob``: a non admin holding the 'Squest user' role.
 
     ``bob`` is scoped to the 'Platform Engineering' organization and its 'SRE' team, so he sees the
@@ -184,7 +246,7 @@ def scoped_user_page(browser: Browser, base_url) -> Page:
 
     Its own browser context, so a spec can drive the admin and the scoped user side by side.
     """
-    context = browser.new_context(base_url=base_url)
+    context = browser.new_context(**dict(browser_context_args, base_url=base_url))
     page = context.new_page()
     login(page, base_url, "bob", "bob")
     yield page

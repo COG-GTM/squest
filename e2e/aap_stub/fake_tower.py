@@ -10,7 +10,12 @@ The stub mirrors the towerlib surface Squest actually uses, and nothing more.
 import itertools
 import logging
 
+import towerlib
+
 logger = logging.getLogger(__name__)
+
+# a spec that needs the "Fail to authenticate with provided token" branch of TowerServerForm uses this
+AUTH_FAILURE_TOKEN = "a-token-the-stub-rejects"
 
 VM_SURVEY_SPEC = {
     "name": "",
@@ -69,7 +74,8 @@ class FakeTowerJob:
         self.id = job_id
         self.job_template = job_template
         self.parameters = parameters
-        self.status = "pending"
+        # the stub controller runs a playbook instantly, so a polled job is already done
+        self.status = "successful"
 
 
 class FakeJobTemplate:
@@ -90,6 +96,7 @@ class FakeJobTemplate:
     def launch(self, **parameters):
         job = FakeTowerJob(next(_job_ids), self, parameters)
         self.launches.append(job)
+        LAUNCHED_JOBS[job.id] = job
         logger.info(f"[aap-stub] Launched job template '{self.name}' as job {job.id}")
         return job
 
@@ -106,19 +113,32 @@ class FakeCredential:
         self.name = name
 
 
+# one controller for the whole run, the way a real one outlives the requests talking to it
+JOB_TEMPLATES = [FakeJobTemplate(*fixture) for fixture in JOB_TEMPLATE_FIXTURES]
+INVENTORIES = [FakeInventory(*fixture) for fixture in INVENTORY_FIXTURES]
+CREDENTIALS = [FakeCredential(*fixture) for fixture in CREDENTIAL_FIXTURES]
+LAUNCHED_JOBS = {}
+
+
 class FakeTower:
     """Replaces ``towerlib.Tower``. Constructed with the same positional and keyword arguments."""
 
     def __init__(self, host=None, username=None, password=None, secure=True, ssl_verify=False, token=None,
                  aap_environment=False):
+        if token == AUTH_FAILURE_TOKEN:
+            raise towerlib.towerlibexceptions.AuthFailed(f"[aap-stub] refused the token of {host}")
         self.host = host
         self.token = token
-        self.job_templates = [FakeJobTemplate(*fixture) for fixture in JOB_TEMPLATE_FIXTURES]
-        self.inventories = [FakeInventory(*fixture) for fixture in INVENTORY_FIXTURES]
-        self.credentials = [FakeCredential(*fixture) for fixture in CREDENTIAL_FIXTURES]
+        self.job_templates = JOB_TEMPLATES
+        self.inventories = INVENTORIES
+        self.credentials = CREDENTIALS
 
     def get_job_template_by_id(self, tower_id):
         for job_template in self.job_templates:
             if job_template.id == int(tower_id):
                 return job_template
         return None
+
+    def get_unified_job_by_id(self, job_id):
+        """How ``Request.check_job_status`` polls a launched job."""
+        return LAUNCHED_JOBS.get(int(job_id))

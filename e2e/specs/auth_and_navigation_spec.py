@@ -10,8 +10,9 @@ import uuid
 import pytest
 from playwright.sync_api import expect
 
-from e2e.helpers import NAV_MAP, goto_sidebar_entry, logout, sidebar_href, submit_form, table_row, \
-    visible_sidebar_entries
+from e2e.aap_stub.fake_tower import AUTH_FAILURE_TOKEN
+from e2e.helpers import NAV_MAP, expect_form_error, expect_table_contains, expect_table_does_not_contain, \
+    goto_sidebar_entry, logout, sidebar_href, submit_form, table_row, visible_sidebar_entries
 
 ADMIN_ONLY_ENTRIES = ["RHAAP/AWX", "Approval workflows", "Role", "Permission", "Users"]
 NAV_MAP_ENTRIES = [(group, name, path) for group, entries in NAV_MAP.items() for name, path in entries.items()]
@@ -62,8 +63,8 @@ def test_admin_reaches_the_instance_list_through_the_sidebar(admin_page):
 
 def test_scoped_user_only_sees_the_instances_of_their_own_scope(scoped_user_page, base_url):
     scoped_user_page.goto(f"{base_url}{NAV_MAP['Service catalog']['Instances']}")
-    expect(table_row(scoped_user_page, "batch-worker-01")).to_have_count(1)
-    expect(scoped_user_page.locator("body")).not_to_contain_text("campaign-site")
+    expect_table_contains(scoped_user_page, "batch-worker-01")
+    expect_table_does_not_contain(scoped_user_page, "campaign-site")
 
 
 def test_anonymous_visitor_is_sent_to_the_login_form(page, base_url):
@@ -88,10 +89,18 @@ def test_signing_out_returns_to_the_login_form(admin_page, base_url):
 
 
 def test_two_users_can_be_driven_side_by_side(admin_page, login_as):
-    """The harness must let a spec act as an approver and as a requester in the same test."""
+    """The harness must let a spec act as an approver and as a requester in the same test.
+
+    Both pages are reloaded after the second sign in: that is what proves the two sessions are
+    independent instead of sharing one cookie jar, where the last sign in would win.
+    """
     carol_page = login_as("carol")
+    admin_page.reload()
+    carol_page.reload()
     expect(carol_page.locator("nav.main-header")).to_contain_text("carol")
     expect(admin_page.locator("nav.main-header")).to_contain_text("admin")
+    expect(admin_page.locator("aside.main-sidebar li.nav-header", has_text="Administration")).to_have_count(1)
+    expect(carol_page.locator("aside.main-sidebar li.nav-header", has_text="Administration")).to_have_count(0)
 
 
 def test_adding_an_aap_server_syncs_its_job_templates(admin_page, base_url):
@@ -111,6 +120,18 @@ def test_adding_an_aap_server_syncs_its_job_templates(admin_page, base_url):
     job_templates = admin_page.locator("#jobtemplates")
     expect(job_templates).to_contain_text("Deploy virtual machine")
     expect(job_templates).to_contain_text("Decommission virtual machine")
+
+
+def test_an_aap_server_whose_token_is_refused_is_not_created(admin_page, base_url):
+    """The other side of the stubbed boundary: a controller refusing a token surfaces as a form error."""
+    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    admin_page.get_by_role("link", name="Add").click()
+    admin_page.fill("input[name='name']", f"Refused AAP {uuid.uuid4().hex[:8]}")
+    admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
+    admin_page.fill("input[name='token']", AUTH_FAILURE_TOKEN)
+    submit_form(admin_page)
+
+    expect_form_error(admin_page, "Fail to authenticate with provided token")
 
 
 def test_scoped_user_cannot_reach_the_administration_pages(scoped_user_page, base_url):
