@@ -38,8 +38,14 @@ poetry run playwright install --with-deps chromium
 poetry run pytest                                   # the whole suite
 poetry run pytest e2e/specs/auth_and_navigation_spec.py
 poetry run pytest --headed --slowmo 400              # watch it
+E2E_PAUSE_MS=2000 poetry run pytest --headed -k nav  # ... and hold on the asserted page at the end
 E2E_REUSE_DB=1 poetry run pytest -k instance         # keep the seeded database: re-runs in seconds
 ```
+
+`--slowmo` pads Playwright actions, so a test whose last step is an assertion still flashes past in
+about a second. `E2E_PAUSE_MS` holds every test on its final page instead, which is also what keeps
+`--video on` from ending an assertion-only test's recording on the login form: the screencast follows
+page activity, so a test that only reads the page it loaded has nothing to record after the load.
 
 `E2E_DB_DATABASE` overrides the database name (`test_squest_db` by default: the mariadb container
 grants `squest_user` on it, and the Django test runner recreates it anyway, so the suite can own it
@@ -62,4 +68,8 @@ at the same time, give them different `E2E_DB_DATABASE` values (the compose file
   (`expect_table_contains`), a state badge. `e2e/helpers.py` holds the shared shell helpers.
 * Keep specs independent: no ordering between tests, and create the objects you need with a unique
   name (the seed is shared and `E2E_REUSE_DB` may keep it between runs).
-* A failing spec prints the path of the dev server log, which holds the Django traceback.
+* A run prints the path of the dev server log at startup, which holds the Django traceback of a
+  failing spec.
+* Artifacts (`--video on`, `--tracing on`) land in `test-results/`, which pytest-playwright **wipes
+  at the start of every run**: copy what you want to keep before re-running. Open a page for a second
+  user through `login_as`, never off `browser` directly, or its artifacts are silently dropped.

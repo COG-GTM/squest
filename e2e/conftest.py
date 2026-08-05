@@ -10,7 +10,9 @@ Session scoped fixtures do the expensive work once per ``pytest`` run:
 ``live_server``      runs ``manage.py runserver`` against it and returns its base URL
 
 Set ``E2E_REUSE_DB=1`` to keep the database from the previous run (skips drop/migrate/seed), which
-turns a re-run of a single spec into a couple of seconds.
+turns a re-run of a single spec into a couple of seconds. Set ``E2E_PAUSE_MS`` to hold the browser
+still for that long at the end of every test, which is what makes a ``--headed`` run watchable and
+what keeps ``--video`` from cutting off the state a test asserts on.
 """
 import contextlib
 import fcntl
@@ -26,7 +28,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Browser, Page, expect
+from playwright.sync_api import Page, expect
 
 from e2e.helpers import login
 from service_catalog.utils import str_to_bool
@@ -36,6 +38,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # it from scratch, so the end to end suite can own it without colliding with the dev database
 E2E_DB_DATABASE = os.environ.get("E2E_DB_DATABASE", "test_squest_db")
 E2E_REUSE_DB = str_to_bool(os.environ.get("E2E_REUSE_DB", "False"))
+# Playwright's screencast is driven by page activity, so a test asserting on a page it did not touch
+# after loading it can end up with a video whose last frame is the login form. Off by default: this
+# costs wall clock, and a green headless run has no reader
+E2E_PAUSE_MS = int(os.environ.get("E2E_PAUSE_MS", "0"))
 SERVER_START_TIMEOUT_SECONDS = 120
 DATABASE_LOCK_TIMEOUT_SECONDS = 1800
 DEFAULT_EXPECT_TIMEOUT_MS = 15_000
@@ -52,6 +58,30 @@ SECRET_ENVIRONMENT_KEYS = ["DB_PASSWORD", "REDIS_CACHE_PASSWORD", "RABBITMQ_PASS
 REDACTED = "***redacted by the e2e harness***"
 
 expect.set_options(timeout=DEFAULT_EXPECT_TIMEOUT_MS)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_call(item):
+    """Keeps the browser on the asserted page for ``E2E_PAUSE_MS`` before the fixtures tear it down."""
+    yield
+    if E2E_PAUSE_MS:
+        time.sleep(E2E_PAUSE_MS / 1000)
+
+
+@pytest.fixture(scope="session")
+def announce(pytestconfig):
+    """Prints a line the user needs to see even on a green run.
+
+    pytest captures fixture output and only replays it for a failing test, which would hide both the
+    server log path and the 'waiting for another run' line of a session that is not failing but is
+    doing something the user is waiting on.
+    """
+    capture_manager = pytestconfig.pluginmanager.getplugin("capturemanager")
+
+    def _announce(message):
+        with capture_manager.global_and_fixture_disabled():
+            print(f"\n[e2e] {message}", file=sys.stderr, flush=True)
+    return _announce
 
 
 def _free_port():
@@ -109,7 +139,7 @@ def server_log_path(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def seeded_database(squest_environment, server_log_path):
+def seeded_database(squest_environment, server_log_path, announce):
     """A migrated database holding the demo data: admin, alice, bob, carol, catalog, instances, quotas.
 
     The database name is shared by every run in this checkout and is recreated from scratch, so the
@@ -117,8 +147,8 @@ def seeded_database(squest_environment, server_log_path):
     waits instead of dropping the database under the first one. Give the runs different
     ``E2E_DB_DATABASE`` values to have them run at the same time.
     """
-    print(f"\n[e2e] Squest server log: {server_log_path}", file=sys.stderr, flush=True)
-    with _database_lock():
+    announce(f"Squest server log: {server_log_path}")
+    with _database_lock(announce):
         with server_log_path.open("w") as log_file:
             if E2E_REUSE_DB:
                 if not _database_exists(squest_environment):
@@ -137,7 +167,7 @@ def seeded_database(squest_environment, server_log_path):
 
 
 @contextlib.contextmanager
-def _database_lock():
+def _database_lock(announce):
     lock_path = Path(tempfile.gettempdir()) / f"squest-e2e-{E2E_DB_DATABASE}.lock"
     with lock_path.open("w") as lock_file:
         deadline = time.monotonic() + DATABASE_LOCK_TIMEOUT_SECONDS
@@ -149,8 +179,7 @@ def _database_lock():
             except OSError:
                 if not waited:
                     waited = True
-                    print(f"\n[e2e] waiting for the run holding '{E2E_DB_DATABASE}' ({lock_path}) to finish",
-                          file=sys.stderr, flush=True)
+                    announce(f"waiting for the run holding '{E2E_DB_DATABASE}' ({lock_path}) to finish")
                 if time.monotonic() > deadline:
                     raise RuntimeError(f"Another end to end run has been holding '{E2E_DB_DATABASE}' for more than "
                                        f"{DATABASE_LOCK_TIMEOUT_SECONDS}s ({lock_path}). Set E2E_DB_DATABASE to run "
@@ -245,26 +274,26 @@ def base_url(live_server):
 
 
 @pytest.fixture
-def login_as(browser: Browser, browser_context_args, base_url):
+def login_as(new_context, base_url):
     """Returns a callable opening a new logged in page: ``login_as('bob')``.
 
     Every user gets its own browser context: a context has a single cookie jar, so signing a second
     user in through the ``page`` context would replace the first one's Django session and the spec
     would quietly drive whoever signed in last.
 
+    The contexts come from pytest-playwright's own ``new_context``, which both closes them and
+    registers them with the artifact recorder: a context created straight off ``browser`` gets a
+    ``record_video_dir`` but is never handed to the recorder, so its video and trace are dropped at
+    the end of the run instead of being saved next to the admin's. Those arguments already carry the
+    overridden ``base_url``, so the context is not told about the live server again.
+
     The demo users all have their username as password, so the password is optional.
     """
-    contexts = []
-
     def _login_as(username, password=None):
-        context = browser.new_context(**dict(browser_context_args, base_url=base_url))
-        contexts.append(context)
-        page = context.new_page()
+        page = new_context().new_page()
         login(page, base_url, username, password or username)
         return page
-    yield _login_as
-    for context in contexts:
-        context.close()
+    return _login_as
 
 
 @pytest.fixture
@@ -275,7 +304,7 @@ def admin_page(page, base_url) -> Page:
 
 
 @pytest.fixture
-def scoped_user_page(browser: Browser, browser_context_args, base_url) -> Page:
+def scoped_user_page(login_as) -> Page:
     """A page logged in as ``bob``: a non admin holding the 'Squest user' role.
 
     ``bob`` is scoped to the 'Platform Engineering' organization and its 'SRE' team, so he sees the
@@ -284,8 +313,4 @@ def scoped_user_page(browser: Browser, browser_context_args, base_url) -> Page:
 
     Its own browser context, so a spec can drive the admin and the scoped user side by side.
     """
-    context = browser.new_context(**dict(browser_context_args, base_url=base_url))
-    page = context.new_page()
-    login(page, base_url, "bob", "bob")
-    yield page
-    context.close()
+    return login_as("bob")
