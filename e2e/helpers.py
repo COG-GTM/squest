@@ -8,7 +8,7 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, ex
 SUBMIT_NAVIGATION_TIMEOUT_MS = 15_000
 TREEVIEW_OPEN_TIMEOUT_MS = 5_000
 # the entries of a treeview (RBAC, Extras) hang under one of these
-TREEVIEW_PARENT = "li.has-treeview > a.nav-link"
+TREEVIEW_PARENT = "li.has-treeview"
 
 # The critical flow surface, derived from ``generate_sidebar`` in
 # ``profiles/templatetags/squest_utils.py``: sidebar group -> entry -> URL path. Sub entries of a
@@ -78,7 +78,11 @@ def sidebar_entry(page: Page, name: str):
         return entry
     parents = sidebar.locator(TREEVIEW_PARENT)
     for index in range(parents.count()):
-        parents.nth(index).click()
+        parent = parents.nth(index)
+        # an open treeview would be collapsed by a click, and it is not hiding the entry anyway
+        if "menu-open" in (parent.get_attribute("class") or ""):
+            continue
+        parent.locator("> a.nav-link").click()
         try:
             entry.first.wait_for(state="visible", timeout=TREEVIEW_OPEN_TIMEOUT_MS)
             break
@@ -99,7 +103,14 @@ def goto_sidebar_entry(page: Page, name: str) -> None:
 
 
 def visible_sidebar_entries(page: Page) -> list[str]:
-    """Every sidebar entry the signed in user can see, treeview children included."""
+    """Every sidebar entry the signed in user is allowed to see, treeview children included.
+
+    "Visible" is about permissions, not about CSS: ``innerText`` falls back to ``textContent`` for a
+    collapsed treeview child, so an entry the sidebar renders is listed whether its parent happens
+    to be open or not. That is what the negative assertions want (an entry a user may not see is not
+    rendered at all), and the opposite of ``sidebar_entry``, whose ``get_by_role`` ignores a hidden
+    link.
+    """
     return [text.strip() for text in page.locator("aside.main-sidebar .nav-link p").all_inner_texts() if text.strip()]
 
 
@@ -156,6 +167,9 @@ def submit_form(page: Page, label: str = None) -> None:
     """
     button = page.locator("form button[type='submit']").first if label is None \
         else page.locator("form").get_by_role("button", name=label).first
+    # resolved before the tolerant block below, so a button that cannot be clicked at all is not
+    # mistaken for a form that answered without navigating
+    button.wait_for(state="visible")
     try:
         with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
             button.click()

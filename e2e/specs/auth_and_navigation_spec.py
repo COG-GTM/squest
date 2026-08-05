@@ -148,3 +148,5 @@ def test_an_aap_server_whose_token_is_refused_is_not_created(admin_page, base_ur
 def test_scoped_user_cannot_reach_the_administration_pages(scoped_user_page, base_url):
     response = scoped_user_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
     assert response.status == 403, f"the scoped user got {response.status} on the AAP server list"
+    # the page names the permission it wanted, which a page failing for another reason would not
+    expect(scoped_user_page.locator("body")).to_contain_text("service_catalog.list_towerserver")

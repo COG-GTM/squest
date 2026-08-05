@@ -117,17 +117,22 @@ def seeded_database(squest_environment, server_log_path):
     waits instead of dropping the database under the first one. Give the runs different
     ``E2E_DB_DATABASE`` values to have them run at the same time.
     """
+    print(f"\n[e2e] Squest server log: {server_log_path}", file=sys.stderr, flush=True)
     with _database_lock():
         with server_log_path.open("w") as log_file:
             if E2E_REUSE_DB:
                 if not _database_exists(squest_environment):
                     raise RuntimeError(f"E2E_REUSE_DB is set but the '{E2E_DB_DATABASE}' database does not exist "
                                        f"yet. Run once without E2E_REUSE_DB to create and seed it.")
+                # a kept database was seeded by an older revision: a migration added since then would
+                # otherwise surface as a column error deep inside a spec
+                commands = [("migrate", "--noinput")]
             else:
                 _recreate_database(squest_environment)
-                for command in [("migrate", "--noinput"), ("insert_default_data",), ("insert_demo_data",)]:
-                    _run_management_command(*command, environment=squest_environment, log_file=log_file,
-                                            log_path=server_log_path)
+                commands = [("migrate", "--noinput"), ("insert_default_data",), ("insert_demo_data",)]
+            for command in commands:
+                _run_management_command(*command, environment=squest_environment, log_file=log_file,
+                                        log_path=server_log_path)
         yield E2E_DB_DATABASE
 
 
