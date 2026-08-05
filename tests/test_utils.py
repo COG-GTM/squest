@@ -3,7 +3,8 @@ from unittest import mock
 
 from Squest.utils.ansible_when import AnsibleWhen
 from service_catalog.utils import str_to_bool, get_mysql_dump_major_version, \
-    get_celery_crontab_parameters_from_crontab_line, get_images_link_from_markdown
+    get_celery_crontab_parameters_from_crontab_line, get_images_link_from_markdown, \
+    humanize_bytes, mask_sensitive_keys, truncate_string
 
 
 class TestUtils(unittest.TestCase):
@@ -83,6 +84,65 @@ TextBefore ![Single picture on a line with text before and after](/notmedia/doc_
 
         list_of_media = get_images_link_from_markdown(test_str)
         self.assertListEqual(list_expected, list_of_media)
+
+    def test_humanize_bytes(self):
+        self.assertEqual(humanize_bytes(None), "0 B")
+        self.assertEqual(humanize_bytes(0), "0 B")
+        self.assertEqual(humanize_bytes(512), "512 B")
+        self.assertEqual(humanize_bytes(1023), "1023 B")
+        self.assertEqual(humanize_bytes(1024), "1.0 KB")
+        self.assertEqual(humanize_bytes(1536), "1.5 KB")
+        self.assertEqual(humanize_bytes(1536, precision=3), "1.500 KB")
+        self.assertEqual(humanize_bytes(1024 ** 2), "1.0 MB")
+        self.assertEqual(humanize_bytes(1024 ** 3), "1.0 GB")
+        self.assertEqual(humanize_bytes(1024 ** 4), "1.0 TB")
+        self.assertEqual(humanize_bytes(1024 ** 5), "1.0 PB")
+        # capped at the largest unit
+        self.assertEqual(humanize_bytes(1024 ** 6), "1024.0 PB")
+
+    def test_mask_sensitive_keys(self):
+        data = {
+            "username": "admin",
+            "password": "secret_value",
+            "Token": "abc",
+            "nested": {
+                "api_key": "key",
+                "count": 3
+            },
+            "list": [{"secret": "s"}, "plain", 42],
+            1: "not_a_string_key"
+        }
+        expected = {
+            "username": "admin",
+            "password": "******",
+            "Token": "******",
+            "nested": {
+                "api_key": "******",
+                "count": 3
+            },
+            "list": [{"secret": "******"}, "plain", 42],
+            1: "not_a_string_key"
+        }
+        self.assertEqual(mask_sensitive_keys(data), expected)
+        # original dict is not modified
+        self.assertEqual(data["password"], "secret_value")
+        # custom sensitive keys
+        self.assertEqual(mask_sensitive_keys({"custom": "v", "password": "p"}, sensitive_keys=["custom"]),
+                         {"custom": "******", "password": "p"})
+        # non dict/list values returned as is
+        self.assertEqual(mask_sensitive_keys("plain"), "plain")
+        self.assertIsNone(mask_sensitive_keys(None))
+
+    def test_truncate_string(self):
+        self.assertEqual(truncate_string(None), "")
+        self.assertEqual(truncate_string("short"), "short")
+        self.assertEqual(truncate_string("a" * 50), "a" * 50)
+        self.assertEqual(truncate_string("a" * 51), "a" * 47 + "...")
+        self.assertEqual(truncate_string("abcdefghij", max_length=5), "ab...")
+        self.assertEqual(truncate_string("abcdefghij", max_length=5, suffix="!"), "abcd!")
+        # suffix as long as (or longer than) max_length: hard cut without suffix
+        self.assertEqual(truncate_string("abcdefghij", max_length=3), "abc")
+        self.assertEqual(truncate_string("abcdefghij", max_length=2, suffix="..."), "ab")
 
     def test_when_render(self):
         # None context

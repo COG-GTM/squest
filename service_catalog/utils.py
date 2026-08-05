@@ -50,6 +50,56 @@ def get_celery_crontab_parameters_from_crontab_line(crontab_line):
     }
 
 
+def humanize_bytes(size, precision=1):
+    """
+    Return a human readable string for a byte count. E.g: 1536 -> '1.5 KB'
+    """
+    if size is None:
+        return "0 B"
+    units = ["B", "KB", "MB", "GB", "TB", "PB"]
+    size = float(size)
+    unit_index = 0
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    if unit_index == 0:
+        return f"{int(size)} {units[unit_index]}"
+    return f"{size:.{precision}f} {units[unit_index]}"
+
+
+def mask_sensitive_keys(data, sensitive_keys=None):
+    """
+    Return a copy of a dict with values of sensitive keys replaced by '******'.
+    Nested dicts and lists are processed recursively.
+    """
+    if sensitive_keys is None:
+        sensitive_keys = ["password", "token", "secret", "api_key"]
+    if isinstance(data, dict):
+        masked = dict()
+        for key, value in data.items():
+            if isinstance(key, str) and any(sensitive in key.lower() for sensitive in sensitive_keys):
+                masked[key] = "******"
+            else:
+                masked[key] = mask_sensitive_keys(value, sensitive_keys)
+        return masked
+    if isinstance(data, list):
+        return [mask_sensitive_keys(item, sensitive_keys) for item in data]
+    return data
+
+
+def truncate_string(text, max_length=50, suffix="..."):
+    """
+    Truncate a string to max_length characters, appending a suffix when truncated.
+    """
+    if text is None:
+        return ""
+    if len(text) <= max_length:
+        return text
+    if max_length <= len(suffix):
+        return text[:max_length]
+    return text[:max_length - len(suffix)] + suffix
+
+
 def get_images_link_from_markdown(markdown_text):
     regex = r"!\[[^\]]*\]\((\/media\/doc_images\/.*?)\s*(\"(?:.*[^\"])\")?\s*\)"
     file_paths = [x.group(1) for x in re.finditer(regex, markdown_text, re.MULTILINE)]
