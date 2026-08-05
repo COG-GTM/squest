@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib.auth.models import User
-from django.core.management import BaseCommand
+from django.core.management import BaseCommand, CommandError
 
 from profiles.models import Organization, Quota, Role, Scope, Team
 from resource_tracker_v2.models import AttributeDefinition, ResourceGroup, Transformer
@@ -54,12 +54,15 @@ DEMO_SURVEY = [
 
 
 class Command(BaseCommand):
-    help = "Seed a demo-ready database. Does not require a reachable AAP/AWX server."
+    help = (
+        "Seed a demo-ready database. Does not require a reachable AAP/AWX server. Intended for empty local or demo "
+        "databases only: rows are matched by name, and every demo user gets their username as password."
+    )
 
     def handle(self, *args, **options):
         print("[insert_demo_data] Start")
         users = self.create_users()
-        tower, job_template = self.create_tower()
+        job_template = self.create_tower()
         services = self.create_catalog(job_template)
         scopes = self.create_scopes(users)
         instances = self.create_instances(services, scopes, users)
@@ -89,7 +92,7 @@ class Command(BaseCommand):
             tower_server=tower,
             defaults={"survey": {"spec": DEMO_SURVEY}, "tower_id": 1, "tower_job_template_data": dict()},
         )
-        return tower, job_template
+        return job_template
 
     def create_catalog(self, job_template):
         infrastructure, _ = Portfolio.objects.get_or_create(
@@ -133,6 +136,8 @@ class Command(BaseCommand):
 
     def create_scopes(self, users):
         squest_user_role = Role.objects.filter(name="Squest user").first()
+        if squest_user_role is None:
+            raise CommandError("Role 'Squest user' not found. Run 'manage.py insert_default_data' first.")
         scopes = {}
         for org_name, team_names in [("Platform Engineering", ["SRE", "Data"]), ("Marketing", ["Web"])]:
             org, _ = Organization.objects.get_or_create(name=org_name)
@@ -140,16 +145,15 @@ class Command(BaseCommand):
             for team_name in team_names:
                 team, _ = Team.objects.get_or_create(name=team_name, org=org)
                 scopes[f"{org_name}/{team_name}"] = team
-        if squest_user_role is not None:
-            for org_name, team_name, user in [
-                ("Platform Engineering", None, users["alice"]),
-                ("Platform Engineering", "SRE", users["bob"]),
-                ("Marketing", "Web", users["carol"]),
-            ]:
-                # a user must belong to the organization before being added to one of its teams
-                scopes[org_name].add_user_in_role(user, squest_user_role)
-                if team_name is not None:
-                    scopes[f"{org_name}/{team_name}"].add_user_in_role(user, squest_user_role)
+        for org_name, team_name, user in [
+            ("Platform Engineering", None, users["alice"]),
+            ("Platform Engineering", "SRE", users["bob"]),
+            ("Marketing", "Web", users["carol"]),
+        ]:
+            # a user must belong to the organization before being added to one of its teams
+            scopes[org_name].add_user_in_role(user, squest_user_role)
+            if team_name is not None:
+                scopes[f"{org_name}/{team_name}"].add_user_in_role(user, squest_user_role)
         return scopes
 
     def create_instances(self, services, scopes, users):
@@ -261,7 +265,10 @@ class Command(BaseCommand):
 
         for scope_name, limits in [
             ("Platform Engineering", {"vCPU": 128, "Memory": 512, "Storage": 8192}),
+            ("Platform Engineering/SRE", {"vCPU": 32, "Memory": 128, "Storage": 2048}),
+            ("Platform Engineering/Data", {"vCPU": 32, "Memory": 128, "Storage": 2048}),
             ("Marketing", {"vCPU": 16, "Memory": 64, "Storage": 1024}),
+            ("Marketing/Web", {"vCPU": 8, "Memory": 32, "Storage": 512}),
         ]:
             for attribute_name, limit in limits.items():
                 Quota.objects.get_or_create(
