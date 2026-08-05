@@ -96,7 +96,7 @@ def _delete_from_its_page(page, url):
     a leftover would pollute the session scoped database of every later spec.
     """
     response = page.goto(url)
-    if response.status != 200:
+    if response.status == 404:  # any other refusal has to be reported, not taken for a deletion
         return
     _header_button(page, "trash").click()
     submit_form(page, "Confirm")
@@ -264,6 +264,7 @@ def test_admin_grants_and_removes_a_role_on_an_organization(admin_page, organiza
     expect(admin_page.locator("body")).to_contain_text(SQUEST_USER_ROLE)
     submit_form(admin_page, "Confirm")
 
+    expect(_card_title(admin_page)).to_contain_text(name)  # still the organization, not an error page
     expect_table_does_not_contain(admin_page, "carol")
 
 
@@ -283,6 +284,7 @@ def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_fact
     expect(table_row(admin_page, "carol")).to_contain_text(SQUEST_USER_ROLE)
 
     _revoke_user(admin_page, team_url, "carol")
+    expect(_card_title(admin_page)).to_contain_text(team)
     expect_table_does_not_contain(admin_page, "carol")
 
     _delete_from_its_page(admin_page, team_url)
@@ -325,6 +327,7 @@ def test_a_role_on_an_organization_reveals_its_instances(admin_page, login_as, b
             _revoke_user(admin_page, organization_url, "carol")
 
     carol_page.reload()
+    expect_table_contains(carol_page, "campaign-site")  # her own instances are still listed
     expect_table_does_not_contain(carol_page, SEEDED_ORGANIZATION_INSTANCE)
 
 
@@ -349,8 +352,11 @@ def test_a_global_role_adds_the_sidebar_entry_it_unlocks(admin_page, role_factor
         if global_scope_url is not None:
             _revoke_user(admin_page, global_scope_url, "bob")
 
-    scoped_user_page.reload()
-    assert "Role" not in visible_sidebar_entries(scoped_user_page)
+    # back to a page bob may still open: the role list now answers 403, and a 403 has no sidebar
+    goto_sidebar_entry(scoped_user_page, "Instances")
+    entries = visible_sidebar_entries(scoped_user_page)
+    assert "Instances" in entries, "bob's own sidebar must still be rendered"
+    assert "Role" not in entries
 
 
 def test_admin_creates_edits_and_deletes_a_role(admin_page, role_factory):
@@ -394,7 +400,7 @@ def test_admin_changes_the_default_permissions_of_the_global_scope(admin_page):
         # the global scope is shared with every later spec, and picking a value toggles it: the
         # permission is only clicked back off when it really was added
         goto_sidebar_entry(admin_page, "Default permissions")
-        admin_page.locator("#owner-permissions table tbody tr").first.wait_for(state="attached")
+        admin_page.locator("#owner-permissions table tbody").wait_for(state="attached")
         if _tab_rows(admin_page, "owner-permissions", added_permission).count() == 1:
             _header_button(admin_page, "pencil-alt").click()
             _pick(admin_page, "owner_permissions", added_permission)
