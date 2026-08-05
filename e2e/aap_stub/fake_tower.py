@@ -9,6 +9,7 @@ The stub mirrors the towerlib surface Squest actually uses, and nothing more.
 """
 import itertools
 import logging
+import threading
 
 import towerlib
 
@@ -67,6 +68,13 @@ INVENTORY_FIXTURES = [(1, "Demo inventory"), (2, "Production inventory")]
 CREDENTIAL_FIXTURES = [(1, "Demo machine credential")]
 
 _job_ids = itertools.count(1000)
+# runserver serves requests on several threads, so two launches must not be handed the same id
+_job_ids_lock = threading.Lock()
+
+
+def _next_job_id():
+    with _job_ids_lock:
+        return next(_job_ids)
 
 
 class FakeTowerJob:
@@ -94,7 +102,7 @@ class FakeJobTemplate:
         self.launches = []
 
     def launch(self, **parameters):
-        job = FakeTowerJob(next(_job_ids), self, parameters)
+        job = FakeTowerJob(_next_job_id(), self, parameters)
         self.launches.append(job)
         LAUNCHED_JOBS[job.id] = job
         logger.info(f"[aap-stub] Launched job template '{self.name}' as job {job.id}")
@@ -140,5 +148,13 @@ class FakeTower:
         return None
 
     def get_unified_job_by_id(self, job_id):
-        """How ``Request.check_job_status`` polls a launched job."""
-        return LAUNCHED_JOBS.get(int(job_id))
+        """How ``Request.check_job_status`` polls a launched job.
+
+        A real controller still knows a job launched before the server restarted, while
+        ``LAUNCHED_JOBS`` only lives in the current process: an id it never handed out is answered
+        with a finished job rather than with ``None``, which the caller would dereference.
+        """
+        job_id = int(job_id)
+        if job_id not in LAUNCHED_JOBS:
+            LAUNCHED_JOBS[job_id] = FakeTowerJob(job_id, self.job_templates[0], {})
+        return LAUNCHED_JOBS[job_id]

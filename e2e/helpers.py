@@ -6,6 +6,9 @@ form/confirm templates), so a spec only has to describe the flow it covers.
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
 
 SUBMIT_NAVIGATION_TIMEOUT_MS = 15_000
+TREEVIEW_OPEN_TIMEOUT_MS = 5_000
+# the entries of a treeview (RBAC, Extras) hang under one of these
+TREEVIEW_PARENT = "li.has-treeview > a.nav-link"
 
 # The critical flow surface, derived from ``generate_sidebar`` in
 # ``profiles/templatetags/squest_utils.py``: sidebar group -> entry -> URL path. Sub entries of a
@@ -61,15 +64,26 @@ def logout(page: Page) -> None:
 
 
 def sidebar_entry(page: Page, name: str):
-    """The sidebar link of a nav map entry. Treeview parents are opened on the way."""
+    """The sidebar link of a nav map entry, with the treeview holding it opened.
+
+    AdminLTE renders the children of a treeview into the DOM and hides them with CSS, so a nested
+    entry only becomes clickable once its parent is expanded. ``get_by_role`` does not match a
+    hidden link, which is what makes a collapsed entry look like a missing one here: the treeview
+    parents are clicked until the entry is visible, and an entry the user is not allowed to see
+    stays at count zero.
+    """
     sidebar = page.locator("aside.main-sidebar")
     entry = sidebar.get_by_role("link", name=name, exact=True)
-    if entry.count() == 0:
-        for parent in ["RBAC", "Extras"]:
-            parent_link = sidebar.get_by_role("link", name=parent, exact=True)
-            if parent_link.count() == 1:
-                parent_link.click()
-        entry = sidebar.get_by_role("link", name=name, exact=True)
+    if entry.count() == 1:
+        return entry
+    parents = sidebar.locator(TREEVIEW_PARENT)
+    for index in range(parents.count()):
+        parents.nth(index).click()
+        try:
+            entry.first.wait_for(state="visible", timeout=TREEVIEW_OPEN_TIMEOUT_MS)
+            break
+        except PlaywrightTimeoutError:
+            pass
     return entry
 
 

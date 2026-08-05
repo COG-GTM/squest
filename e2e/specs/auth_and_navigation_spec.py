@@ -61,6 +61,17 @@ def test_admin_reaches_the_instance_list_through_the_sidebar(admin_page):
     expect(table_row(admin_page, "web-frontend-01")).to_have_count(1)
 
 
+def test_admin_reaches_a_treeview_entry_through_the_sidebar(admin_page):
+    """'Role' lives under the collapsed RBAC treeview: reaching it means the treeview was opened.
+
+    AdminLTE renders treeview children into the DOM and hides them with CSS, so a helper that only
+    checks whether the link exists clicks something invisible and times out.
+    """
+    goto_sidebar_entry(admin_page, "Role")
+    expect(admin_page).to_have_url(re.compile(r"/profiles/role/"))
+    expect(table_row(admin_page, "Squest user")).to_have_count(1)
+
+
 def test_scoped_user_only_sees_the_instances_of_their_own_scope(scoped_user_page, base_url):
     scoped_user_page.goto(f"{base_url}{NAV_MAP['Service catalog']['Instances']}")
     expect_table_contains(scoped_user_page, "batch-worker-01")

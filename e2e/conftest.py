@@ -44,7 +44,8 @@ DEFAULT_EXPECT_TIMEOUT_MS = 15_000
 # instead of inheriting the shell: an unrelated secret must never end up in a test log
 PASSTHROUGH_ENVIRONMENT_KEYS = ["PATH", "HOME", "LANG", "LC_ALL", "TZ", "VIRTUAL_ENV", "DB_HOST", "DB_PORT",
                                 "DB_USER", "DB_PASSWORD", "REDIS_CACHE_HOST", "REDIS_CACHE_PORT",
-                                "REDIS_CACHE_PASSWORD", "RABBITMQ_HOST", "RABBITMQ_PORT"]
+                                "REDIS_CACHE_PASSWORD", "RABBITMQ_HOST", "RABBITMQ_PORT", "RABBITMQ_USER",
+                                "RABBITMQ_PASSWORD"]
 # ... and the values of these are scrubbed out of the log on the way in, because that environment dump
 # would otherwise put the infrastructure passwords in a file a CI job may keep as an artifact
 SECRET_ENVIRONMENT_KEYS = ["DB_PASSWORD", "REDIS_CACHE_PASSWORD", "RABBITMQ_PASSWORD"]
@@ -72,7 +73,7 @@ def _pump_redacted(stream, log_file, secrets):
         log_file.flush()
 
 
-def _run_management_command(*arguments, environment, log_file):
+def _run_management_command(*arguments, environment, log_file, log_path):
     command = [sys.executable, "manage.py", *arguments]
     log_file.write(f"\n$ {' '.join(command)}\n")
     log_file.flush()
@@ -80,7 +81,7 @@ def _run_management_command(*arguments, environment, log_file):
                                stderr=subprocess.STDOUT, text=True)
     _pump_redacted(process.stdout, log_file, _secrets_of(environment))
     if process.wait() != 0:
-        raise RuntimeError(f"'{' '.join(arguments)}' failed with {process.returncode}. See the log.")
+        raise RuntimeError(f"'{' '.join(arguments)}' failed with {process.returncode}. See {log_path}.")
 
 
 @pytest.fixture(scope="session")
@@ -124,9 +125,9 @@ def seeded_database(squest_environment, server_log_path):
                                        f"yet. Run once without E2E_REUSE_DB to create and seed it.")
             else:
                 _recreate_database(squest_environment)
-                _run_management_command("migrate", "--noinput", environment=squest_environment, log_file=log_file)
-                _run_management_command("insert_default_data", environment=squest_environment, log_file=log_file)
-                _run_management_command("insert_demo_data", environment=squest_environment, log_file=log_file)
+                for command in [("migrate", "--noinput"), ("insert_default_data",), ("insert_demo_data",)]:
+                    _run_management_command(*command, environment=squest_environment, log_file=log_file,
+                                            log_path=server_log_path)
         yield E2E_DB_DATABASE
 
 
@@ -135,11 +136,16 @@ def _database_lock():
     lock_path = Path(tempfile.gettempdir()) / f"squest-e2e-{E2E_DB_DATABASE}.lock"
     with lock_path.open("w") as lock_file:
         deadline = time.monotonic() + DATABASE_LOCK_TIMEOUT_SECONDS
+        waited = False
         while True:
             try:
                 fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
             except OSError:
+                if not waited:
+                    waited = True
+                    print(f"\n[e2e] waiting for the run holding '{E2E_DB_DATABASE}' ({lock_path}) to finish",
+                          file=sys.stderr, flush=True)
                 if time.monotonic() > deadline:
                     raise RuntimeError(f"Another end to end run has been holding '{E2E_DB_DATABASE}' for more than "
                                        f"{DATABASE_LOCK_TIMEOUT_SECONDS}s ({lock_path}). Set E2E_DB_DATABASE to run "
