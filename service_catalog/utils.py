@@ -2,6 +2,40 @@ import os
 import re
 
 
+def get_orderable_services_for_user(user, parent_portfolio_id=None, filter_by_portfolio=True):
+    from django.db.models import Q
+
+    from profiles.models import Permission
+    from service_catalog.models import Operation, OperationType, Service
+
+    permission_filter = Q(
+        operation__enabled=True,
+        operation__type=OperationType.CREATE,
+    )
+    if filter_by_portfolio:
+        permission_filter &= Q(
+            operation__service__parent_portfolio__id=parent_portfolio_id
+        )
+
+    service_ids = []
+    for permission in Permission.objects.filter(permission_filter).distinct():
+        service_ids.extend(
+            Operation.get_queryset_for_user_filtered(
+                user,
+                permission.permission_str,
+            ).filter(
+                permission=permission,
+                enabled=True,
+                type=OperationType.CREATE,
+            ).values_list("service__id", flat=True)
+        )
+
+    service_filter = Q(id__in=service_ids, enabled=True)
+    if filter_by_portfolio:
+        service_filter &= Q(parent_portfolio__id=parent_portfolio_id)
+    return Service.objects.filter(service_filter)
+
+
 def str_to_bool(s):
     if isinstance(s, bool):  # do not convert if already a boolean
         return s

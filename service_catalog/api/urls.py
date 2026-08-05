@@ -4,6 +4,10 @@ from service_catalog.api.views import *
 from service_catalog.api.views.custom_link_api_views import CustomLinkDetails, CustomLinkListCreate
 
 urlpatterns = [
+    path('favorite-service/', FavoriteServiceListCreate.as_view(),
+         name='api_favorite_service_list_create'),
+    path('favorite-service/<int:pk>/', FavoriteServiceDetails.as_view(),
+         name='api_favorite_service_details'),
     # Instance CRUD
     path('instance/', InstanceList.as_view(), name='api_instance_list_create'),
     path('instance/<int:pk>/', InstanceDetails.as_view(), name='api_instance_details'),

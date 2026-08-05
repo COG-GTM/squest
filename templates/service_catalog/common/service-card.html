@@ -1,0 +1,32 @@
+{% load static %}
+<div class="col-sm-12 col-lg-2 mb-4">
+    <div class="card h-100">
+        <img class="card-img-top" src="
+                {% if service.image %}{{ service.image.url }}{% else %}{% static '/squest/img/no_image.png' %}{% endif %}"
+             alt="Service image">
+        <div class="card-body">
+            <h5 class="card-title">
+                <strong>{{ service.name }}</strong>
+            </h5>
+            <p class="card-text">{{ service.description }}</p>
+        </div>
+        <div class="card-footer d-flex align-items-center">
+            <a href="{% url 'service_catalog:create_operation_list' service.id %}"
+               class="btn btn-primary">Order</a>
+            <form method="post" action="{% url 'service_catalog:toggle_favorite_service' service.id %}"
+                  class="ml-auto">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-link p-0"
+                        title="{% if service.id in favorite_ids %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                    <i class="{% if service.id in favorite_ids %}fas text-warning{% else %}far text-muted{% endif %} fa-star"></i>
+                </button>
+            </form>
+            {% if service.description_doc %}
+                <a title="Description documentation"
+                   href="{% url 'service_catalog:doc_details' service.description_doc.id %}"
+                   class="text-info ml-2"><i class="fas fa-2x fa-info-circle"></i></a>
+            {% endif %}
+        </div>
+    </div>
+</div>

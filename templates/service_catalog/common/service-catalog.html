@@ -20,6 +20,22 @@
 {% block main %}
     <div class="col-md-12">
         <div class="row">
+            {% if current_portfolio is None and favorites %}
+                <div class="col-12">
+                    <h4><i class="fas fa-star text-warning"></i> Favorites</h4>
+                </div>
+                {% for service in favorites %}
+                    {% include "service_catalog/common/service-card.html" %}
+                {% endfor %}
+            {% endif %}
+            {% if current_portfolio is None and recently_ordered %}
+                <div class="col-12">
+                    <h4><i class="fas fa-history"></i> Recently ordered</h4>
+                </div>
+                {% for service in recently_ordered %}
+                    {% include "service_catalog/common/service-card.html" %}
+                {% endfor %}
+            {% endif %}
             {% if portfolio_list %}
                 {% for portfolio in portfolio_list %}
                     <div class="col-sm-12 col-lg-2 mb-4">
@@ -48,28 +64,7 @@
             {% endif %}
             {% if service_list %}
                 {% for service in service_list %}
-                    <div class="col-sm-12 col-lg-2 mb-4">
-                        <div class="card h-100">
-                            <img class="card-img-top" src="
-                                    {% if service.image %}{{ service.image.url }}{% else %}{% static '/squest/img/no_image.png' %}{% endif %}"
-                                 alt="Service image">
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <strong>{{ service.name }}</strong>
-                                </h5>
-                                <p class="card-text">{{ service.description }}</p>
-                            </div>
-                            <div class="card-footer">
-                                <a href="{% url 'service_catalog:create_operation_list' service.id %}"
-                                   class="btn btn-primary">Order</a>
-                                {% if service.description_doc %}
-                                    <a title="Description documentation"
-                                       href="{% url 'service_catalog:doc_details' service.description_doc.id %}"
-                                       class="text-info float-right"><i class="fas fa-2x fa-info-circle"></i></a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                    {% include "service_catalog/common/service-card.html" %}
                 {% endfor %}
             {% endif %}
         </div>

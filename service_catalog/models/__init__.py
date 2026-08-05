@@ -26,3 +26,4 @@ from service_catalog.models.approval_step_state import ApprovalStepState
 from service_catalog.models.approval_workflow import ApprovalWorkflow
 from service_catalog.models.approval_workflow_state import ApprovalWorkflowState
 from service_catalog.models.email_template import EmailTemplate
+from service_catalog.models.favorite_service import FavoriteService

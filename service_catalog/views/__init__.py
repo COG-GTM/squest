@@ -20,3 +20,4 @@ from .tower_survey_field import *
 from .approval_step_views import *
 from .approval_workflow_views import *
 from .email_template import *
+from .favorite_service import *

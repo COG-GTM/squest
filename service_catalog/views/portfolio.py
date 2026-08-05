@@ -2,12 +2,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 
 from Squest.utils.squest_views import *
-from profiles.models import Permission
 from service_catalog.filters.portfolio_filter import PortfolioFilter
 from service_catalog.forms import PortfolioForm
-from service_catalog.models import Service, Operation, OperationType
+from service_catalog.models import FavoriteService, Request
 from service_catalog.models.portfolio import Portfolio
 from service_catalog.tables.portfolio_tables import PortfolioTable
+from service_catalog.utils import get_orderable_services_for_user
 
 
 class PortfolioListView(SquestListView):
@@ -66,31 +66,59 @@ def service_catalog_list(request):
     current_portfolio = get_object_or_404(Portfolio.objects.all(), id=current_portfolio_id) if current_portfolio_id else None
     sub_portfolio_list = Portfolio.objects.filter(parent_portfolio__id=current_portfolio_id)
 
-    # service_list = Service.objects.filter(parent_portfolio__id=current_portfolio_id, enabled=True)
-
-    # get all create and enabled permission for current selected service
-    all_permission_current_service = Permission.objects.filter(operation__service__parent_portfolio__id=current_portfolio_id,
-                                                               operation__enabled=True,
-                                                               operation__type__in=[
-                                                                   OperationType.CREATE]).distinct()
-    # Init empty queryset to be returned
-    operation_qs = Operation.objects.none()
-    for permission in all_permission_current_service.all():
-        # add allowed operation for all service if the user has the permission
-        operation_qs = operation_qs | Operation.get_queryset_for_user_filtered(request.user,
-                                                                               permission.permission_str)
-    # restrict to only the selected service
-    service_ids = operation_qs.filter(service__parent_portfolio__id=current_portfolio_id,
-                                      enabled=True,
-                                      type__in=[OperationType.CREATE]).values_list('service__id', flat=True)
-    service_list = Service.objects.filter(id__in=service_ids)
-
+    service_list = get_orderable_services_for_user(
+        request.user,
+        current_portfolio_id,
+        filter_by_portfolio=True,
+    )
+    orderable_services = get_orderable_services_for_user(
+        request.user,
+        filter_by_portfolio=False,
+    )
+    favorite_ids = set(
+        FavoriteService.objects.filter(
+            user=request.user,
+            service__in=orderable_services,
+        ).values_list("service_id", flat=True)
+    )
+    favorites = []
+    recently_ordered = []
+    if current_portfolio is None:
+        favorites = [
+            favorite.service
+            for favorite in FavoriteService.objects.filter(
+                user=request.user,
+                service__in=orderable_services,
+            ).select_related("service")
+        ]
+        recent_service_ids = []
+        for service_id in Request.objects.filter(
+            user=request.user,
+            operation__service__isnull=False,
+        ).order_by("-last_updated", "-id").values_list(
+            "operation__service_id",
+            flat=True,
+        ):
+            if service_id not in recent_service_ids:
+                recent_service_ids.append(service_id)
+        recent_services = {
+            service.id: service
+            for service in orderable_services.filter(id__in=recent_service_ids[:5])
+        }
+        recently_ordered = [
+            recent_services[service_id]
+            for service_id in recent_service_ids[:5]
+            if service_id in recent_services and service_id not in favorite_ids
+        ]
 
     context = {
         'breadcrumbs': get_portfolio_breadcrumbs(current_portfolio_id),
         'portfolio_list': sub_portfolio_list,
         'service_list': service_list,
-        'current_portfolio': current_portfolio
+        'current_portfolio': current_portfolio,
+        'favorite_ids': favorite_ids,
+        'favorites': favorites,
+        'recently_ordered': recently_ordered,
     }
     context['breadcrumbs'][-1]['url'] = ''
     return render(request, "service_catalog/common/service-catalog.html", context)

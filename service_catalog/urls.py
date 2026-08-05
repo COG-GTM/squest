@@ -48,6 +48,8 @@ urlpatterns = [
     path('service/<int:pk>/edit/', views.ServiceEditView.as_view(), name='service_edit'),
     path('service/<int:pk>/delete/', views.ServiceDeleteView.as_view(), name='service_delete'),
     path('service/<int:pk>/', views.ServiceDetailView.as_view(), name='service_details'),
+    path('service/<int:service_id>/favorite/', views.toggle_favorite_service,
+         name='toggle_favorite_service'),
 
     # Operation CRUD
     path('operation/', views.OperationListView.as_view(), name='operation_list'),
