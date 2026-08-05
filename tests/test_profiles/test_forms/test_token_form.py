@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.utils import timezone
 
 from Squest.utils.datetime_widget import NativeDateTimeInput
@@ -11,10 +13,12 @@ class TokenFormTests(BaseTestProfile):
         form = TokenForm()
         widget = form.fields['expires'].widget
         self.assertIsInstance(widget, NativeDateTimeInput)
-        expected_min = timezone.now().astimezone().strftime("%Y-%m-%dT%H:%M")
-        self.assertEqual(expected_min, widget.attrs.get('min'))
+        actual_min = timezone.datetime.fromisoformat(widget.attrs['min'])
+        now = timezone.now().astimezone().replace(tzinfo=None, second=0, microsecond=0)
+        self.assertGreaterEqual(actual_min, now)
+        self.assertLessEqual(actual_min, now + timedelta(minutes=1))
 
     def test_expires_min_date_is_rendered(self):
         form = TokenForm()
-        expected_min = timezone.now().astimezone().strftime("%Y-%m-%dT%H:%M")
-        self.assertIn(f'min="{expected_min}"', str(form['expires']))
+        actual_min = form.fields['expires'].widget.attrs['min']
+        self.assertIn(f'min="{actual_min}"', str(form['expires']))

@@ -1,7 +1,7 @@
 {% has_perm request.user record.permission.permission_str as can_request_operation %}
 {% if can_request_operation %}
     <a href="{% url 'service_catalog:request_service' service_id=service_id operation_id=record.id %}"
-       class="btn btn-info bg-sm">
+       class="btn btn-info btn-sm">
         <i class="fas fa-shopping-cart"></i>
     </a>
 {% endif %}

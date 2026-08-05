@@ -16,7 +16,7 @@ class OrganizationTableTest(BaseTestProfile):
 
     def test_render_users_without_user(self):
         self.assertEqual(
-            f'<a href="{self.details_url}#users" class="btn btn-secondary bg-sm">0</a>',
+            f'<a href="{self.details_url}#users" class="btn btn-outline-secondary btn-sm">0</a>',
             self.table.render_users(value=None, record=self.table_org)
         )
 
@@ -25,19 +25,19 @@ class OrganizationTableTest(BaseTestProfile):
         user = User.objects.create_user('user_for_organization_table', 'user@hpe.com', self.common_password)
         self.table_org.add_user_in_role(user, role)
         self.assertEqual(
-            f'<a href="{self.details_url}#users" class="btn btn-secondary bg-sm">1</a>',
+            f'<a href="{self.details_url}#users" class="btn btn-outline-secondary btn-sm">1</a>',
             self.table.render_users(value=None, record=self.table_org)
         )
 
     def test_render_teams_without_team(self):
         self.assertEqual(
-            f'<a href="{self.details_url}#teams" class="btn btn-secondary bg-sm">0</a>',
+            f'<a href="{self.details_url}#teams" class="btn btn-outline-secondary btn-sm">0</a>',
             self.table.render_teams(value=None, record=self.table_org)
         )
 
     def test_render_teams_counts_teams(self):
         Team.objects.create(org=self.table_org, name="team_for_organization_table")
         self.assertEqual(
-            f'<a href="{self.details_url}#teams" class="btn btn-secondary bg-sm">1</a>',
+            f'<a href="{self.details_url}#teams" class="btn btn-outline-secondary btn-sm">1</a>',
             self.table.render_teams(value=None, record=self.table_org)
         )

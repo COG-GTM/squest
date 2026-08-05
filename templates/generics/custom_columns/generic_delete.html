@@ -5,13 +5,13 @@
             {%  if can_delete %}
                 {% if parent_id %}
                     <a href="{% url app|add:":"|add:class|add:"_delete" parent_id record.id %}"
-                       class="btn btn-danger bg-sm"
+                       class="btn btn-danger btn-sm"
                        title="Delete">
                         <i class="fas fa-trash"></i>
                     </a>
                 {% else %}
                     <a href="{% url app|add:":"|add:class|add:"_delete" record.id %}"
-                       class="btn btn-danger bg-sm"
+                       class="btn btn-danger btn-sm"
                        title="Delete">
                         <i class="fas fa-trash"></i>
                     </a>

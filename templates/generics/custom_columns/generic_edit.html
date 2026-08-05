@@ -6,13 +6,13 @@
                 {% if parent_id %}
 
                     <a href="{% url app|add:":"|add:class|add:"_edit" parent_id record.id %}"
-                       class="btn btn-primary bg-sm"
+                       class="btn btn-primary btn-sm"
                        title="Edit">
                         <i class="fas fa-pencil-alt"></i>
                     </a>
                 {% else %}
                     <a href="{% url app|add:":"|add:class|add:"_edit" record.id %}"
-                       class="btn btn-primary bg-sm"
+                       class="btn btn-primary btn-sm"
                        title="Edit">
                         <i class="fas fa-pencil-alt"></i>
                     </a>

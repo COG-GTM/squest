@@ -222,7 +222,6 @@ function sync_all_job_template() {
         }, 2000);
 
     }).fail((err) => {
-        alert_error("Error during API call");
         showToast({
             title: 'Tower sync',
             body: 'Error',
@@ -325,7 +324,6 @@ function sync_job_template() {
         }, 2000);
 
     }).fail((err) => {
-        alert_error("Error during API call");
         showToast({
             title: 'Job template sync from RHAAP/AWX',
             body: 'Error',

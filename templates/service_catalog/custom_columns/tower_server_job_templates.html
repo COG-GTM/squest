@@ -1,3 +1,3 @@
-<a id="job_template_count_{{ record.id }}" href="{% url 'service_catalog:jobtemplate_list' record.id %}" class="btn btn-outline-secondary bg-sm">
+<a id="job_template_count_{{ record.id }}" href="{% url 'service_catalog:jobtemplate_list' record.id %}" class="btn btn-outline-secondary btn-sm">
     {{ record.jobtemplate_set.all | length }}
 </a>
