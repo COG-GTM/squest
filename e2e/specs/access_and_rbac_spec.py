@@ -86,12 +86,17 @@ def _open_organization(page, name):
 
 
 def _delete_from_its_page(page, url):
-    """Deletes an object through its own page. Used by the factories to clean up after a test."""
+    """Deletes an object through its own page. Used by the factories to clean up after a test.
+
+    A refused delete re-renders the confirm page instead of raising, so the page is asked for again:
+    a leftover would pollute the session scoped database of every later spec.
+    """
     response = page.goto(url)
     if response.status != 200:
         return
     _header_button(page, "trash").click()
     submit_form(page, "Confirm")
+    assert page.goto(url).status == 404, f"{url} was not deleted"
 
 
 def _tab_rows(page, tab_id, text):
@@ -266,6 +271,8 @@ def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_fact
     _revoke_user(admin_page, team_url, "carol")
     expect_table_does_not_contain(admin_page, "carol")
 
+    _delete_from_its_page(admin_page, team_url)
+
 
 def test_an_organization_stays_invisible_until_a_role_is_granted_in_it(admin_page, organization_factory, login_as):
     """The point of the family, seen by a signed in user: no role, no scope."""
@@ -370,9 +377,13 @@ def test_admin_changes_the_default_permissions_of_the_global_scope(admin_page):
         _open_tab(admin_page, "Owner permissions")
         expect(_tab_rows(admin_page, "owner-permissions", added_permission)).to_have_count(1)
     finally:
-        _header_button(admin_page, "pencil-alt").click()
-        _pick(admin_page, "owner_permissions", added_permission)  # clicking a selected value unselects it
-        submit_form(admin_page)
+        # the global scope is shared with every later spec, and picking a value toggles it: the
+        # permission is only clicked back off when it really was added
+        goto_sidebar_entry(admin_page, "Default permissions")
+        if _tab_rows(admin_page, "owner-permissions", added_permission).count() == 1:
+            _header_button(admin_page, "pencil-alt").click()
+            _pick(admin_page, "owner_permissions", added_permission)
+            submit_form(admin_page)
 
     _open_tab(admin_page, "Owner permissions")
     expect(_tab_rows(admin_page, "owner-permissions", added_permission)).to_have_count(0)
