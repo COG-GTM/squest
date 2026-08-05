@@ -120,6 +120,12 @@ def _tab_rows(page, tab_id, text):
     return page.locator(f"#{tab_id} table tbody tr").filter(has_text=text)
 
 
+def _selected_labels(page, field_name):
+    """What a multi select currently holds, which no pagination of a list page can hide."""
+    return page.locator(f"select[name='{field_name}']").evaluate(
+        "select => Array.from(select.selectedOptions, option => option.text)")
+
+
 def _grant_role(page, scope_url, role, username, button="Add roles/users"):
     """Adds ``username`` to ``role`` on the scope of ``scope_url``, through its RBAC button."""
     page.goto(scope_url)
@@ -159,6 +165,29 @@ def organization_factory(admin_page):
         admin_page.get_by_role("link", name="Add", exact=True).click()
         admin_page.fill("[name='name']", name)
         admin_page.fill("[name='description']", f"Organization of {name}")
+        submit_form(admin_page)
+        expect(_card_title(admin_page)).to_contain_text(name)
+        created.append(admin_page.url)
+        return name, admin_page.url
+
+    yield _create
+    _delete_all(admin_page, created)
+
+
+@pytest.fixture
+def team_factory(admin_page, organization_factory):
+    """Creates teams from their organization page and deletes them before it.
+
+    Depending on ``organization_factory`` is what orders the two teardowns: ``Team.org`` is a
+    PROTECT relation, so a team surviving a failed test would make its organization undeletable.
+    """
+    created = []
+
+    def _create(organization_url, name=None):
+        name = name or _unique("e2e-team")
+        admin_page.goto(organization_url)
+        admin_page.get_by_role("link", name="Add team").click()
+        admin_page.fill("[name='name']", name)
         submit_form(admin_page)
         expect(_card_title(admin_page)).to_contain_text(name)
         created.append(admin_page.url)
@@ -231,18 +260,12 @@ def test_admin_deletes_an_organization(admin_page, organization_factory):
     expect_table_does_not_contain(admin_page, name)
 
 
-def test_admin_creates_and_deletes_a_team_of_an_organization(admin_page, organization_factory):
+def test_admin_creates_and_deletes_a_team_of_an_organization(admin_page, organization_factory, team_factory):
     organization, organization_url = organization_factory()
-    team = _unique("e2e-team")
-
-    admin_page.get_by_role("link", name="Add team").click()
-    admin_page.fill("[name='name']", team)
-    submit_form(admin_page)
+    team, team_url = team_factory(organization_url)
 
     # a team lives under its organization: its page points back at it and it shows on its teams tab
-    expect(_card_title(admin_page)).to_contain_text(team)
     expect(admin_page.locator("body")).to_contain_text(organization)
-    team_url = admin_page.url
     admin_page.goto(organization_url)
     _open_tab(admin_page, "Teams")
     expect(_tab_rows(admin_page, "teams", team)).to_have_count(1)
@@ -274,13 +297,9 @@ def test_admin_grants_and_removes_a_role_on_an_organization(admin_page, organiza
     expect(_tab_rows(admin_page, "users", "carol")).to_have_count(0)
 
 
-def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_factory):
+def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_factory, team_factory):
     organization, organization_url = organization_factory()
-    team = _unique("e2e-team")
-    admin_page.get_by_role("link", name="Add team").click()
-    admin_page.fill("[name='name']", team)
-    submit_form(admin_page)
-    team_url = admin_page.url
+    team, team_url = team_factory(organization_url)
 
     # a user has to belong to the organization before they can be added to one of its teams
     _grant_role(admin_page, organization_url, SQUEST_USER_ROLE, "carol")
@@ -292,8 +311,6 @@ def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_fact
     _revoke_user(admin_page, team_url, "carol")
     expect(_card_title(admin_page)).to_contain_text(team)
     expect(_tab_rows(admin_page, "users", "carol")).to_have_count(0)
-
-    _delete_from_its_page(admin_page, team_url)
 
 
 def test_an_organization_stays_invisible_until_a_role_is_granted_in_it(admin_page, organization_factory, login_as):
@@ -412,13 +429,12 @@ def test_admin_changes_the_default_permissions_of_the_global_scope(admin_page):
         expect(_tab_rows(admin_page, "owner-permissions", added_permission)).to_have_count(1)
     finally:
         # the global scope is shared with every later spec, and picking a value toggles it: the
-        # permission is only clicked back off when it really was added
+        # form itself says whether the permission is there to be clicked back off
         goto_sidebar_entry(admin_page, "Default permissions")
-        admin_page.locator("#owner-permissions table tbody").wait_for(state="attached")
-        if _tab_rows(admin_page, "owner-permissions", added_permission).count() == 1:
-            _header_button(admin_page, "pencil-alt").click()
+        _header_button(admin_page, "pencil-alt").click()
+        if added_permission in _selected_labels(admin_page, "owner_permissions"):
             _pick(admin_page, "owner_permissions", added_permission)
-            submit_form(admin_page)
+        submit_form(admin_page)
 
     _open_tab(admin_page, "Owner permissions")
     expect(_tab_rows(admin_page, "owner-permissions", added_permission)).to_have_count(0)
