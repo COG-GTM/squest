@@ -21,7 +21,7 @@ import uuid
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e.helpers import goto_sidebar_entry, submit_form
+from e2e.helpers import expect_no_form_error, goto_sidebar_entry, submit_form
 
 SEEDED_SUPPORTS = ["Disk usage above 90%", "Cannot reach the instance over SSH",
                    "Please increase the connection limit"]
@@ -33,7 +33,7 @@ def _unique(prefix: str) -> str:
 
 
 def _rows(page: Page, table_id: str, text: str):
-    """A row of one named table. The instance detail page renders three tables at once."""
+    """A row of one named table. The instance detail page renders three tables, plus spec cards."""
     return page.locator(f"#{table_id} tbody tr").filter(has_text=text)
 
 
@@ -106,10 +106,14 @@ def _order_new_instance(admin_page: Page, name: str) -> None:
 
     admin_page.fill("input[name='0-name']", name)
     admin_page.select_option("select[name='0-quota_scope']", label="Platform Engineering")
-    admin_page.locator("input[type='submit']").click()
+    with admin_page.expect_navigation():
+        admin_page.locator("input[type='submit']").click()
+    expect_no_form_error(admin_page)
     admin_page.fill("input[name='1-vcpu']", "2")
     admin_page.fill("input[name='1-memory']", "8")
-    admin_page.locator("input[type='submit']").click()
+    with admin_page.expect_navigation():
+        admin_page.locator("input[type='submit']").click()
+    expect_no_form_error(admin_page)
     expect(admin_page).to_have_url(re.compile(r"/service-catalog/request/$"))
 
 
@@ -124,8 +128,7 @@ def _open_new_support(page: Page, instance_name: str, title: str) -> None:
 
 def _comment_support(page: Page, content: str) -> None:
     page.fill("textarea[name='content']", content)
-    page.get_by_role("button", name="Comment").click()
-    page.wait_for_load_state()
+    submit_form(page, "Comment")
 
 
 # ---------------------------------------------------------------------------- instance list/detail
@@ -316,8 +319,8 @@ def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
     admin_page.wait_for_load_state()
 
     expect(admin_page).to_have_url(re.compile(r"/instance/$"))
-    expect(_rows(admin_page, "instance_table", first)).to_have_count(0)
-    expect(_rows(admin_page, "instance_table", second)).to_have_count(0)
+    expect(_instance_rows(admin_page, first)).to_have_count(0)
+    expect(_instance_rows(admin_page, second)).to_have_count(0)
 
 
 def test_scoped_user_cannot_delete_an_instance(scoped_user_page):
