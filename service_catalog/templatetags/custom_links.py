@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_disabled_button(tittle, button_name):
-    return f'<a class="btn btn-sm btn-outline-dark ml-1" disabled="disabled" title="{tittle}">' \
+    return f'<a class="btn btn-sm btn-outline-dark ms-1" disabled="disabled" title="{tittle}">' \
            f'<i class="fas fa-exclamation-triangle"></i> {button_name}</a>\n'
 
 
@@ -50,7 +50,7 @@ def get_single_button(custom_link, context):
         logger.warning(f"[custom_links] failed to render: {e.message}")
         return get_disabled_button(tittle=e, button_name=custom_link.name)
 
-    templated_button = f"<a href=\"{rendered_url}\" class=\"btn btn-sm btn-{custom_link.button_class} ml-1\">{rendered_text}</a>"
+    templated_button = f"<a href=\"{rendered_url}\" class=\"btn btn-sm btn-{custom_link.button_class} ms-1\">{rendered_text}</a>"
     return templated_button
 
 
@@ -87,10 +87,10 @@ def get_dropdown_button(custom_link, context):
     dropdown_button = """
         <div class="dropdown">
         <button class="btn btn-sm btn-{{ custom_link.button_class }} 
-            dropdown-toggle ml-1" 
+            dropdown-toggle ms-1"
             type="button" 
             id="dropdown-{{ custom_link.id }}" 
-            data-toggle="dropdown" 
+            data-bs-toggle="dropdown"
             aria-haspopup="true" 
             aria-expanded="false">
         {{ custom_link.name }}    
