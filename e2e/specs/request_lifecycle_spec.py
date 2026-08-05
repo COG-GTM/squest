@@ -212,7 +212,7 @@ def test_requester_can_cancel_own_request(admin_page, scoped_user_page):
     else:
         warnings.warn("bob's Cancel action was not rendered; fell back to admin cancel")
         admin_page.goto(detail_href)
-        admin_page.get_by_title("Cancel").click()
+        admin_page.get_by_title("Cancel").first.click()
         admin_page.get_by_role("button", name="Confirm").click()
     scoped_user_page.goto(detail_href)
     _request_state(scoped_user_page, "CANCELED")
