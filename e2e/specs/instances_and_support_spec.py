@@ -21,7 +21,7 @@ import uuid
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e.helpers import expect_table_contains, expect_table_does_not_contain, goto_sidebar_entry, submit_form
+from e2e.helpers import goto_sidebar_entry, submit_form
 
 SEEDED_SUPPORTS = ["Disk usage above 90%", "Cannot reach the instance over SSH",
                    "Please increase the connection limit"]
@@ -37,10 +37,42 @@ def _rows(page: Page, table_id: str, text: str):
     return page.locator(f"#{table_id} tbody tr").filter(has_text=text)
 
 
+def _apply_filter(page: Page, field: str, value: str) -> None:
+    page.wait_for_load_state("load")
+    filter_field = page.locator(f"input[name='{field}']")
+    opener = page.locator(".content-header a[data-widget='control-sidebar']")
+    expect(opener).to_have_count(1)
+    for _ in range(3):
+        if filter_field.is_visible():
+            break
+        if page.locator("body.control-sidebar-open, body.control-sidebar-slide-open").count():
+            expect(filter_field).to_be_visible(timeout=1000)
+            break
+        opener.click()
+        expect(page.locator("body")).to_have_class(
+            re.compile(r"(^|\s)control-sidebar-(?:open|slide-open)(\s|$)"), timeout=1000
+        )
+    expect(filter_field).to_be_visible(timeout=1000)
+    filter_field.fill(value)
+    page.get_by_role("button", name="Apply").click()
+    page.wait_for_load_state()
+
+
+def _instance_rows(page: Page, name: str):
+    goto_sidebar_entry(page, "Instances")
+    _apply_filter(page, "name", name)
+    return _rows(page, "instance_table", name)
+
+
+def _support_rows(page: Page, title: str):
+    goto_sidebar_entry(page, "Support")
+    _apply_filter(page, "title", title)
+    return _rows(page, "support_table", title)
+
+
 def _open_instance(page: Page, name: str) -> None:
     """Instances sidebar entry, then the instance's own link in the list."""
-    goto_sidebar_entry(page, "Instances")
-    _rows(page, "instance_table", name).get_by_role("link", name=name, exact=True).click()
+    _instance_rows(page, name).get_by_role("link", name=name, exact=True).click()
     page.wait_for_load_state()
 
 
@@ -54,8 +86,7 @@ def _instance_url(page: Page, name: str) -> str:
     Used to hand another user a page they must not be able to open: a 403 can only be asserted on a
     URL, and this keeps the URL the one Squest itself renders.
     """
-    goto_sidebar_entry(page, "Instances")
-    return _rows(page, "instance_table", name).get_by_role("link", name=name, exact=True).get_attribute("href")
+    return _instance_rows(page, name).get_by_role("link", name=name, exact=True).get_attribute("href")
 
 
 def _detail_field(page: Page, label: str):
@@ -100,8 +131,7 @@ def _comment_support(page: Page, content: str) -> None:
 
 
 def test_admin_reads_the_instance_list_columns(admin_page):
-    goto_sidebar_entry(admin_page, "Instances")
-    row = _rows(admin_page, "instance_table", "batch-worker-01")
+    row = _instance_rows(admin_page, "batch-worker-01")
     expect(row).to_have_count(1)
     expect(row).to_contain_text("Virtual machine")
     expect(row).to_contain_text("SRE")
@@ -109,7 +139,7 @@ def test_admin_reads_the_instance_list_columns(admin_page):
     expect(row).to_contain_text("bob")
     # the whole demo estate, both organizations included, is visible to a superuser
     for name in ["web-frontend-01", "web-frontend-02", "analytics-ns", "reporting-db", "campaign-site"]:
-        expect_table_contains(admin_page, name)
+        expect(_instance_rows(admin_page, name)).to_have_count(1)
 
 
 def test_admin_reads_an_instance_detail_page(admin_page):
@@ -135,10 +165,9 @@ def test_admin_reads_an_instance_detail_page(admin_page):
 
 def test_scoped_user_reads_their_own_instance_without_the_admin_spec(scoped_user_page):
     """bob sees his organization's instances, but the admin spec stays hidden from him."""
-    goto_sidebar_entry(scoped_user_page, "Instances")
     for name in ["batch-worker-01", "web-frontend-01", "reporting-db"]:
-        expect_table_contains(scoped_user_page, name)
-    expect_table_does_not_contain(scoped_user_page, "campaign-site")
+        expect(_instance_rows(scoped_user_page, name)).to_have_count(1)
+    expect(_instance_rows(scoped_user_page, "campaign-site")).to_have_count(0)
 
     _open_instance(scoped_user_page, "batch-worker-01")
     expect(_detail_field(scoped_user_page, "State")).to_contain_text("AVAILABLE")
@@ -220,9 +249,8 @@ def test_admin_renames_an_instance(admin_page):
     submit_form(admin_page, "Update")
 
     expect(admin_page.locator(".card-title").first).to_contain_text(renamed)
-    goto_sidebar_entry(admin_page, "Instances")
-    expect_table_contains(admin_page, renamed)
-    expect_table_does_not_contain(admin_page, name)
+    expect(_instance_rows(admin_page, renamed)).to_have_count(1)
+    expect(_instance_rows(admin_page, name)).to_have_count(0)
 
 
 def test_archiving_is_refused_on_an_instance_that_was_never_deleted(admin_page):
@@ -240,7 +268,7 @@ def test_the_archived_instance_list_is_reachable_and_holds_no_live_instance(admi
     goto_sidebar_entry(admin_page, "Instances")
     admin_page.get_by_role("link", name="Archived instances").click()
     expect(admin_page.locator(".breadcrumb")).to_contain_text("Archived instance")
-    expect_table_does_not_contain(admin_page, "batch-worker-01")
+    expect(_rows(admin_page, "instance_table", "batch-worker-01")).to_have_count(0)
 
 
 def test_admin_deletes_an_instance_through_the_confirmation_page(admin_page):
@@ -254,7 +282,7 @@ def test_admin_deletes_an_instance_through_the_confirmation_page(admin_page):
     admin_page.wait_for_load_state()
 
     expect(admin_page).to_have_url(re.compile(r"/instance/$"))
-    expect_table_does_not_contain(admin_page, name)
+    expect(_instance_rows(admin_page, name)).to_have_count(0)
 
 
 def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
@@ -264,6 +292,8 @@ def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
     _order_new_instance(admin_page, second)
 
     goto_sidebar_entry(admin_page, "Instances")
+    _apply_filter(admin_page, "name", "e2e-bulk-")
+    expect(_rows(admin_page, "instance_table", "e2e-bulk-")).to_have_count(2)
     for name in [first, second]:
         _rows(admin_page, "instance_table", name).locator("input[name='selection']").check()
     admin_page.get_by_role("button", name="Delete").click()
@@ -276,8 +306,8 @@ def test_admin_bulk_deletes_instances_from_the_list_checkboxes(admin_page):
     admin_page.wait_for_load_state()
 
     expect(admin_page).to_have_url(re.compile(r"/instance/$"))
-    expect_table_does_not_contain(admin_page, first)
-    expect_table_does_not_contain(admin_page, second)
+    expect(_rows(admin_page, "instance_table", first)).to_have_count(0)
+    expect(_rows(admin_page, "instance_table", second)).to_have_count(0)
 
 
 def test_scoped_user_cannot_delete_an_instance(scoped_user_page):
@@ -297,21 +327,20 @@ def test_scoped_user_cannot_delete_an_instance(scoped_user_page):
 
 
 def test_support_list_holds_the_seeded_tickets_and_stays_in_scope(admin_page, scoped_user_page, login_as):
-    goto_sidebar_entry(admin_page, "Support")
     for title in SEEDED_SUPPORTS:
-        expect_table_contains(admin_page, title)
-        expect(_rows(admin_page, "support_table", title)).to_contain_text("OPENED")
+        row = _support_rows(admin_page, title)
+        expect(row).to_have_count(1)
+        expect(row).to_contain_text("OPENED")
 
-    goto_sidebar_entry(scoped_user_page, "Support")
     for title in SEEDED_SUPPORTS:
-        expect_table_contains(scoped_user_page, title)
+        expect(_support_rows(scoped_user_page, title)).to_have_count(1)
 
     # every seeded ticket belongs to the Platform Engineering scope: carol must see none of them
     carol_page = login_as("carol")
     goto_sidebar_entry(carol_page, "Support")
     expect(carol_page.get_by_role("heading", name="Support")).to_be_visible()
     for title in SEEDED_SUPPORTS:
-        expect_table_does_not_contain(carol_page, title)
+        expect(_support_rows(carol_page, title)).to_have_count(0)
 
 
 def test_owner_opens_a_support_ticket_and_the_admin_answers_it(scoped_user_page, admin_page):
@@ -319,14 +348,15 @@ def test_owner_opens_a_support_ticket_and_the_admin_answers_it(scoped_user_page,
     _open_new_support(scoped_user_page, "batch-worker-01", title)
 
     # Squest sends the owner back to the support tab of the instance, with the new ticket on it
+    # (that table is rendered without pagination, so the new row is always on it)
     expect(_rows(scoped_user_page, "support_table", title)).to_have_count(1)
-    _rows(scoped_user_page, "support_table", title).get_by_role("link", name=re.compile(title)).click()
+
+    _support_rows(scoped_user_page, title).get_by_role("link", name=re.compile(title)).click()
     expect(scoped_user_page.get_by_title("state")).to_contain_text("OPENED")
     _comment_support(scoped_user_page, "bob: still reproducing after a reboot")
     expect(scoped_user_page.locator(".post").last).to_contain_text("bob: still reproducing after a reboot")
 
-    goto_sidebar_entry(admin_page, "Support")
-    _rows(admin_page, "support_table", title).get_by_role("link", name=re.compile(title)).click()
+    _support_rows(admin_page, title).get_by_role("link", name=re.compile(title)).click()
     expect(admin_page.locator(".post").first).to_contain_text("bob")
     _comment_support(admin_page, "admin: a maintenance window is scheduled")
 
@@ -338,28 +368,25 @@ def test_admin_closes_and_reopens_a_support_ticket(scoped_user_page, admin_page)
     title = _unique("e2e-close")
     _open_new_support(scoped_user_page, "batch-worker-01", title)
     # the "Squest user" role holds no close_support permission: the owner is not offered the button
-    _rows(scoped_user_page, "support_table", title).get_by_role("link", name=re.compile(title)).click()
+    _support_rows(scoped_user_page, title).get_by_role("link", name=re.compile(title)).click()
     expect(scoped_user_page.get_by_role("link", name="Close")).to_have_count(0)
 
-    goto_sidebar_entry(admin_page, "Support")
-    _rows(admin_page, "support_table", title).get_by_role("link", name=re.compile(title)).click()
+    _support_rows(admin_page, title).get_by_role("link", name=re.compile(title)).click()
     admin_page.get_by_role("link", name="Close").click()
     expect(admin_page.get_by_title("state")).to_contain_text("CLOSED")
 
-    goto_sidebar_entry(admin_page, "Support")
-    expect(_rows(admin_page, "support_table", title)).to_contain_text("CLOSED")
+    expect(_support_rows(admin_page, title)).to_contain_text("CLOSED")
 
-    _rows(admin_page, "support_table", title).get_by_role("link", name=re.compile(title)).click()
+    _support_rows(admin_page, title).get_by_role("link", name=re.compile(title)).click()
     admin_page.get_by_role("link", name="Re-open").click()
     expect(admin_page.get_by_title("state")).to_contain_text("OPENED")
-    goto_sidebar_entry(admin_page, "Support")
-    expect(_rows(admin_page, "support_table", title)).to_contain_text("OPENED")
+    expect(_support_rows(admin_page, title)).to_contain_text("OPENED")
 
 
 def test_a_support_ticket_of_another_scope_answers_403(scoped_user_page, login_as):
     title = _unique("e2e-scope")
     _open_new_support(scoped_user_page, "batch-worker-01", title)
-    support_url = _rows(scoped_user_page, "support_table", title).get_by_role(
+    support_url = _support_rows(scoped_user_page, title).get_by_role(
         "link", name=re.compile(title)).get_attribute("href")
 
     carol_page = login_as("carol")
