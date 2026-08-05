@@ -29,8 +29,8 @@ def main():
 
     missing = []
     for path, locations in sorted(refs.items()):
-        resolved = finders.find(path.lstrip("/"))
-        if resolved is None:
+        resolved = finders.find(path)
+        if path.startswith("/") or resolved is None:
             missing.append((path, locations))
 
     print(f"Checked {len(refs)} distinct static paths.")

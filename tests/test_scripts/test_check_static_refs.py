@@ -69,9 +69,10 @@ class CheckStaticRefsTest(TestCase):
             set(reported.split(": ", 1)[1].split(", "))
         )
 
-    def test_main_strips_leading_slash_before_resolving(self):
+    def test_main_rejects_leading_slash(self):
         (self.root / "templates" / "absolute.html").write_text('{% static "/squest/css/absolute.css" %}\n')
         with mock.patch.object(check_static_refs.finders, "find", return_value="/found") as find:
-            returned_code, _ = self.run_main()
-        self.assertEqual(0, returned_code)
-        self.assertIn("squest/css/absolute.css", {call.args[0] for call in find.call_args_list})
+            returned_code, output = self.run_main()
+        self.assertEqual(1, returned_code)
+        self.assertIn("- /squest/css/absolute.css: templates/absolute.html:1", output)
+        self.assertIn("/squest/css/absolute.css", {call.args[0] for call in find.call_args_list})
