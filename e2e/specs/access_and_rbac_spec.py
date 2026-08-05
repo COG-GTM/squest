@@ -96,7 +96,8 @@ def _delete_from_its_page(page, url):
     a leftover would pollute the session scoped database of every later spec.
     """
     response = page.goto(url)
-    if response.status == 404:  # any other refusal has to be reported, not taken for a deletion
+    # any other refusal has to be reported rather than taken for a deletion
+    if response is None or response.status == 404:
         return
     _header_button(page, "trash").click()
     submit_form(page, "Confirm")
@@ -152,7 +153,8 @@ def organization_factory(admin_page):
     def _create(name=None):
         name = name or _unique("e2e-org")
         goto_sidebar_entry(admin_page, "Organization")
-        admin_page.get_by_role("link", name="Add").click()
+        # exact: a row of the list can be named after a hex suffix that spells "add"
+        admin_page.get_by_role("link", name="Add", exact=True).click()
         admin_page.fill("[name='name']", name)
         admin_page.fill("[name='description']", f"Organization of {name}")
         submit_form(admin_page)
@@ -172,7 +174,7 @@ def role_factory(admin_page):
     def _create(permissions, name=None):
         name = name or _unique("e2e-role")
         goto_sidebar_entry(admin_page, "Role")
-        admin_page.get_by_role("link", name="Add").click()
+        admin_page.get_by_role("link", name="Add", exact=True).click()
         admin_page.fill("[name='name']", name)
         admin_page.fill("[name='description']", f"Role of {name}")
         _pick(admin_page, "permissions", *permissions)
@@ -190,7 +192,8 @@ def test_admin_creates_an_organization_and_reaches_its_detail_page(admin_page, o
 
     expect(admin_page.locator("body")).to_contain_text(f"Organization of {name}")
     _open_tab(admin_page, "Roles")
-    expect(admin_page.locator("#role_table")).to_be_visible()
+    # scoped to the pane: "role_table" is also the id of the approval workflow table
+    expect(admin_page.locator("#roles table")).to_be_visible()
 
     goto_sidebar_entry(admin_page, "Organization")
     _filter_list(admin_page, "name", name)
