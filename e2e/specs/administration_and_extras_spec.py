@@ -92,6 +92,23 @@ def _table_row(page: Page, text: str):
     return row
 
 
+def _expect_no_row(page: Page, text: str) -> None:
+    """Asserts no matching row exists on any page of a reused-DB list."""
+    first_link = page.locator("ul.pagination li a").filter(has_text="1").first
+    if first_link.count():
+        first_link.click()
+        page.wait_for_load_state()
+    row = helper_table_row(page, text)
+    for _ in range(20):
+        expect(row).to_have_count(0)
+        next_link = page.locator("ul.pagination li:not(.disabled) a").filter(has_text="next")
+        if not next_link.count():
+            return
+        next_link.click()
+        page.wait_for_load_state()
+        row = helper_table_row(page, text)
+
+
 def _delete_row(page: Page, row_text: str) -> None:
     """Deletes a list row through its trash button and the generic confirmation page."""
     _row_action(page, row_text, "Delete").click()
@@ -125,8 +142,8 @@ def test_compliancy_page_reports_a_compliant_job_template_as_a_success(admin_pag
     _open_job_template_list(admin_page, tower_name)
 
     row = _table_row(admin_page, COMPLIANT_JOB_TEMPLATE)
-    expect(row.locator("svg.fa-check")).to_have_count(1)
-    row.locator("svg[id^='icon_']").click()
+    expect(row.locator("[id^='icon_'][class*='fa-check']")).to_have_count(1)
+    row.locator("[id^='icon_']").click()
     admin_page.wait_for_load_state()
 
     card = admin_page.locator(".card", has_text="Variables/Prompt on launch")
@@ -139,8 +156,8 @@ def test_compliancy_page_warns_about_prompt_on_launch_for_a_non_compliant_job_te
     _open_job_template_list(admin_page, tower_name)
 
     row = _table_row(admin_page, NON_COMPLIANT_JOB_TEMPLATE)
-    expect(row.locator("svg.fa-times")).to_have_count(1)
-    row.locator("svg[id^='icon_']").click()
+    expect(row.locator("[id^='icon_'][class*='fa-times']")).to_have_count(1)
+    row.locator("[id^='icon_']").click()
     admin_page.wait_for_load_state()
 
     card = admin_page.locator(".card", has_text="Variables/Prompt on launch")
@@ -159,7 +176,7 @@ def test_operator_renames_an_aap_server(admin_page):
 
     expect_no_form_error(admin_page)
     expect(_table_row(admin_page, renamed)).to_have_count(1)
-    expect_table_does_not_contain(admin_page, tower_name)
+    _expect_no_row(admin_page, tower_name)
 
 
 def test_operator_updates_the_token_of_an_aap_server(admin_page):
@@ -190,7 +207,7 @@ def test_operator_is_told_when_the_aap_token_is_refused(admin_page):
     expect_form_error(admin_page, "Fail to authenticate with provided token")
     goto_sidebar_entry(admin_page, "RHAAP/AWX")
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    expect_table_does_not_contain(admin_page, name)
+    _expect_no_row(admin_page, name)
 
 
 def test_operator_deletes_an_aap_server(admin_page):
@@ -199,7 +216,7 @@ def test_operator_deletes_an_aap_server(admin_page):
     _delete_row(admin_page, tower_name)
 
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    expect_table_does_not_contain(admin_page, tower_name)
+    _expect_no_row(admin_page, tower_name)
 
 
 def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, scoped_user_page):
@@ -238,9 +255,14 @@ def test_announcement_can_be_edited_and_deleted(admin_page):
 
 def _create_announcement(page: Page, title: str, message: str) -> None:
     """Creates an announcement that is live right now, so a user sees it on the home page."""
-    now = datetime.now()
     goto_sidebar_entry(page, "Announcements")
     page.get_by_role("link", name="Add").click()
+    now_text = page.locator("small.form-text", has_text="Time Zone is").first
+    now = datetime.now()
+    if now_text.count():
+        match = re.search(r"\((\d{4}-\d{2}-\d{2} \d{2}:\d{2})\)", now_text.inner_text())
+        if match:
+            now = datetime.strptime(match.group(1), DATETIME_FORMAT)
     page.fill("input[name='title']", title)
     page.fill("textarea[name='message']", message)
     page.fill("input[name='date_start']", now.replace(hour=0, minute=0).strftime(DATETIME_FORMAT))
