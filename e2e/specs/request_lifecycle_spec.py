@@ -1,6 +1,14 @@
+"""Exercise request lifecycle, filtering, comments, archival, and approval workflows.
+
+The spec covers requester and administrator transitions, scoped visibility, non-admin approvals,
+and two-step approval sequencing. On reused databases, Bob's Cancel action can occasionally fail
+to render despite his role permission; that path warns and falls back to an administrator cancel.
+"""
+
 import re
 import warnings
 from uuid import uuid4
+from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
@@ -61,7 +69,7 @@ def _submit_request(page, service_name, instance_name, scope_label):
                 control.first.fill(value)
     comment = page.get_by_label("Comment")
     if comment.count():
-        comment.fill(f"Created by e2e {_unique('comment')}")
+        comment.first.fill(f"Created by e2e {_unique('comment')}")
     page.get_by_role("button", name="Submit").click()
     expect(page).to_have_url(re.compile(r"/request/"))
     expect(table_row(page, instance_name)).to_have_count(1)
@@ -94,10 +102,13 @@ def _apply_filter(page, field):
     form = field.locator("xpath=ancestor::form")
     submit = form.locator("button[type='submit']")
     expect(submit).to_have_count(1)
+    field_name = field.get_attribute("name")
+    expected_value = field.input_value()
+    assert field_name
     if submit.is_visible():
         try:
             with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
-                submit.click()
+                submit.first.click()
         except PlaywrightTimeoutError:
             pass
     else:
@@ -106,6 +117,8 @@ def _apply_filter(page, field):
                 form.evaluate("(form) => form.submit()")
         except PlaywrightTimeoutError:
             pass
+    query_value = parse_qs(urlparse(page.url).query).get(field_name, [])
+    assert expected_value in query_value
 
 
 def test_admin_can_submit_and_inspect_a_fresh_request(admin_page):
@@ -126,7 +139,7 @@ def test_request_list_can_filter_by_state_and_instance(admin_page):
     expect(table_row(admin_page, instance)).to_have_count(1)
     state = admin_page.locator("[name='state']")
     if state.count():
-        state.select_option(label="SUBMITTED", force=True)
+        state.first.select_option(label="SUBMITTED", force=True)
         _apply_filter(admin_page, state)
         expect(table_row(admin_page, instance)).to_have_count(1)
     instance_filter = admin_page.locator("[name='instance__name']")
@@ -187,7 +200,7 @@ def test_requester_can_cancel_own_request(admin_page, scoped_user_page):
     detail_href = scoped_user_page.url
     cancel = scoped_user_page.get_by_title("Cancel")
     if cancel.count():
-        cancel.click()
+        cancel.first.click()
         scoped_user_page.get_by_role("button", name="Confirm").click()
     else:
         warnings.warn("bob's Cancel action was not rendered; fell back to admin cancel")
@@ -233,7 +246,7 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
     state = admin_page.locator("[name='state']")
     if not state.is_visible():
         admin_page.locator("a[data-widget='control-sidebar']").first.click()
-    state.select_option(label="COMPLETE", force=True)
+    state.first.select_option(label="COMPLETE", force=True)
     _apply_filter(admin_page, state)
     row = table_rows(admin_page).filter(
         has=admin_page.locator("a").filter(has_text=re.compile(r"^COMPLETE$"))
@@ -244,14 +257,25 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
     archived = False
     try:
         admin_page.goto(request_link)
+        instance_name = _detail_row(admin_page, "Instance").get_by_role("link").inner_text()
         archive = admin_page.get_by_title("Archive")
         expect(archive).to_be_visible()
         archive.click()
         archived = True
         _request_state(admin_page, "ARCHIVED")
         goto_sidebar_entry(admin_page, "Requests")
+        instance_filter = admin_page.locator("[name='instance__name']")
+        if not instance_filter.is_visible():
+            admin_page.locator("a[data-widget='control-sidebar']").first.click()
+        instance_filter.first.fill(instance_name)
+        _apply_filter(admin_page, instance_filter)
         expect(admin_page.locator(f"table a[href='{request_link}']")).to_have_count(0)
         admin_page.get_by_role("link", name=re.compile("Archived")).click()
+        instance_filter = admin_page.locator("[name='instance__name']")
+        if not instance_filter.is_visible():
+            admin_page.locator("a[data-widget='control-sidebar']").first.click()
+        instance_filter.first.fill(instance_name)
+        _apply_filter(admin_page, instance_filter)
         archived_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
         expect(archived_row).to_have_count(1)
         archived_href = archived_row.locator("a[href*='/request/']").first.get_attribute("href")
@@ -261,6 +285,11 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
         archived = False
         _request_state(admin_page, "COMPLETE")
         goto_sidebar_entry(admin_page, "Requests")
+        instance_filter = admin_page.locator("[name='instance__name']")
+        if not instance_filter.is_visible():
+            admin_page.locator("a[data-widget='control-sidebar']").first.click()
+        instance_filter.first.fill(instance_name)
+        _apply_filter(admin_page, instance_filter)
         restored_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
         expect(restored_row).to_have_count(1)
     finally:
@@ -329,7 +358,7 @@ def _delete_approval_entities(admin_page, workflow_name, role_name):
                 admin_page.locator("a.btn-danger:not([href*='approval-step'])").click()
                 admin_page.get_by_role("button", name="Confirm").click()
         except Exception:
-            pass
+            warnings.warn(f"approval workflow {workflow_name} may have leaked")
     if role_name:
         try:
             goto_sidebar_entry(admin_page, "Role")
@@ -339,13 +368,14 @@ def _delete_approval_entities(admin_page, workflow_name, role_name):
                 admin_page.locator("a.btn-danger").first.click()
                 admin_page.get_by_role("button", name="Confirm").click()
         except Exception:
-            pass
+            warnings.warn(f"approval role {role_name} may have leaked")
 
 
 def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
-    role_name = _create_approval_role_and_grant_to_alice(admin_page)
+    role_name = None
     workflow_name = None
     try:
+        role_name = _create_approval_role_and_grant_to_alice(admin_page)
         goto_sidebar_entry(admin_page, "Approval workflows")
         admin_page.get_by_role("link", name="Add").click()
         workflow_name = _unique("workflow")
@@ -375,10 +405,12 @@ def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
     finally:
         _delete_approval_entities(admin_page, workflow_name, role_name)
 
+
 def test_approval_workflow_two_steps(admin_page, scoped_user_page, login_as):
-    role_name = _create_approval_role_and_grant_to_alice(admin_page)
+    role_name = None
     workflow_name = None
     try:
+        role_name = _create_approval_role_and_grant_to_alice(admin_page)
         goto_sidebar_entry(admin_page, "Approval workflows")
         admin_page.get_by_role("link", name="Add").click()
         workflow_name = _unique("workflow")
