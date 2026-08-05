@@ -48,6 +48,17 @@ class TestAdminInstanceViews(BaseTestRequest):
         response = self.client.get(url)
         self.assertEqual(200, response.status_code)
 
+    def test_instance_details_hides_support_selection_column(self):
+        url = reverse('service_catalog:instance_details', kwargs=self.args)
+
+        response = self.client.get(url)
+
+        self.assertEqual(200, response.status_code)
+        self.assertNotIn(
+            "selection",
+            [column.name for column in response.context["supports_table"].columns],
+        )
+
     def test_cannot_get_instance_details_when_logout(self):
         self.client.logout()
         url = reverse('service_catalog:instance_details', kwargs=self.args)
