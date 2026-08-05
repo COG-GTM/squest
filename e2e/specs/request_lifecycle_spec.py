@@ -282,8 +282,8 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
         assert archived_href
         admin_page.goto(archived_href)
         admin_page.get_by_title("Unarchive").click()
-        archived = False
         _request_state(admin_page, "COMPLETE")
+        archived = False
         goto_sidebar_entry(admin_page, "Requests")
         instance_filter = admin_page.locator("[name='instance__name']")
         if not instance_filter.is_visible():
@@ -323,8 +323,7 @@ def test_scoped_user_cannot_see_marketing_request(admin_page, scoped_user_page):
     expect_permission_denied(scoped_user_page)
 
 
-def _create_approval_role_and_grant_to_alice(admin_page):
-    role_name = _unique("approval-role")
+def _create_approval_role_and_grant_to_alice(admin_page, role_name):
     goto_sidebar_entry(admin_page, "Role")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.get_by_label("Name").fill(role_name)
@@ -355,7 +354,7 @@ def _delete_approval_entities(admin_page, workflow_name, role_name):
             workflow_row = table_row(admin_page, workflow_name)
             if workflow_row.count():
                 workflow_row.get_by_role("link").first.click()
-                admin_page.locator("a.btn-danger:not([href*='approval-step'])").click()
+                admin_page.locator("a.btn-danger:not([href*='approval-step'])").first.click()
                 admin_page.get_by_role("button", name="Confirm").click()
         except Exception:
             warnings.warn(f"approval workflow {workflow_name} may have leaked")
@@ -372,10 +371,10 @@ def _delete_approval_entities(admin_page, workflow_name, role_name):
 
 
 def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
-    role_name = None
+    role_name = _unique("approval-role")
     workflow_name = None
     try:
-        role_name = _create_approval_role_and_grant_to_alice(admin_page)
+        _create_approval_role_and_grant_to_alice(admin_page, role_name)
         goto_sidebar_entry(admin_page, "Approval workflows")
         admin_page.get_by_role("link", name="Add").click()
         workflow_name = _unique("workflow")
@@ -407,10 +406,10 @@ def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
 
 
 def test_approval_workflow_two_steps(admin_page, scoped_user_page, login_as):
-    role_name = None
+    role_name = _unique("approval-role")
     workflow_name = None
     try:
-        role_name = _create_approval_role_and_grant_to_alice(admin_page)
+        _create_approval_role_and_grant_to_alice(admin_page, role_name)
         goto_sidebar_entry(admin_page, "Approval workflows")
         admin_page.get_by_role("link", name="Add").click()
         workflow_name = _unique("workflow")
