@@ -1,7 +1,7 @@
 {% has_perm request.user "service_catalog.change_operation" as can_change %}
 {% if can_change %}
         <a href="{% url 'service_catalog:operation_edit_survey' object.id %}"
-           class="btn btn-light bg-sm">
+           class="btn btn-outline-secondary bg-sm">
             <i class="fas fa-clipboard-list"></i> Survey
         </a>
 {% endif %}

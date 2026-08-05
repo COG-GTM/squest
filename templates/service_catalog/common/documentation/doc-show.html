@@ -9,7 +9,7 @@
 
 {% block extra_header_button %}
     {% if request.user.is_staff %}
-        <a class="btn btn-light"
+        <a class="btn btn-outline-secondary"
            href="{% url 'admin:service_catalog_doc_change' doc.id %}">
             <i class="fas fa-edit"></i> Edit
         </a>

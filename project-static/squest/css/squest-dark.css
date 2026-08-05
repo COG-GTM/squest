@@ -19,3 +19,7 @@
 [data-bs-theme="dark"] div.martor-preview > h6 {
     color: white !important;
 }
+
+[data-bs-theme="dark"] div.martor-preview {
+    background-color: var(--bs-body-bg);
+}

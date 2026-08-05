@@ -347,7 +347,7 @@
                         </blockquote>
                     {% endif %}
                     {% if can_process_request and object.tower_job_id is not None %}
-                        <a class="btn btn-light"
+                        <a class="btn btn-outline-secondary"
                            title="Job"
                            href="{{ object.tower_job_url }}">
                             Job #{{ object.tower_job_id }}
@@ -386,7 +386,7 @@
                                            href="{% url 'service_catalog:request_process' object.id %}">
                                             <i class="fas fa-play"></i> Retry process
                                         </a>
-                                        <a class="btn btn-light"
+                                        <a class="btn btn-outline-secondary"
                                            title="Job"
                                            href="{{ object.tower_job_url }}">
                                             <i class="fas fa-bug"></i> Job #{{ object.tower_job_id }}

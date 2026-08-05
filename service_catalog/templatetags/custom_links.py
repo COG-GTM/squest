@@ -50,7 +50,8 @@ def get_single_button(custom_link, context):
         logger.warning(f"[custom_links] failed to render: {e.message}")
         return get_disabled_button(tittle=e, button_name=custom_link.name)
 
-    templated_button = f"<a href=\"{rendered_url}\" class=\"btn btn-sm btn-{custom_link.button_class} ms-1\">{rendered_text}</a>"
+    button_class = "outline-secondary" if custom_link.button_class == "default" else custom_link.button_class
+    templated_button = f"<a href=\"{rendered_url}\" class=\"btn btn-sm btn-{button_class} ms-1\">{rendered_text}</a>"
     return templated_button
 
 
@@ -86,7 +87,7 @@ def get_dropdown_button(custom_link, context):
     # prepare the main button
     dropdown_button = """
         <div class="dropdown">
-        <button class="btn btn-sm btn-{{ custom_link.button_class }} 
+        <button class="btn btn-sm btn-{{ button_class }}
             dropdown-toggle ms-1"
             type="button" 
             id="dropdown-{{ custom_link.id }}" 
@@ -104,7 +105,8 @@ def get_dropdown_button(custom_link, context):
         """
     dropdown_context = {
         "custom_link": custom_link,
-        "list_li_group_link": list_li_group_link
+        "list_li_group_link": list_li_group_link,
+        "button_class": "outline-secondary" if custom_link.button_class == "default" else custom_link.button_class,
     }
     templated_dropdown = Template(dropdown_button)
     rendered_dropdown = templated_dropdown.render(dropdown_context)
