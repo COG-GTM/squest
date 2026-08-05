@@ -21,7 +21,8 @@ from e2e.helpers import NAV_MAP, expect_table_contains, expect_table_does_not_co
 SQUEST_USER_ROLE = "Squest user"
 SEEDED_ORGANIZATION = "Platform Engineering"
 SEEDED_ORGANIZATION_INSTANCE = "web-frontend-01"
-FOREIGN_ORGANIZATION = "Marketing"
+FOREIGN_ORGANIZATION = "Marketing"  # foreign to bob, whose roles are on Platform Engineering
+CAROL_ORGANIZATION = "Marketing"  # carol holds the seeded role in Marketing/Web
 
 
 def _unique(prefix):
@@ -329,7 +330,7 @@ def test_an_organization_stays_invisible_until_a_role_is_granted_in_it(admin_pag
     carol_page = login_as("carol")
 
     goto_sidebar_entry(carol_page, "Organization")
-    expect_table_contains(carol_page, FOREIGN_ORGANIZATION)
+    expect_table_contains(carol_page, CAROL_ORGANIZATION)
     expect_table_does_not_contain(carol_page, name)
     assert carol_page.goto(url).status == 403, "a user without a role on an organization must not open it"
 
