@@ -71,13 +71,17 @@ def _option_labels(page: Page, field_name: str) -> list[str]:
     return [text.strip() for text in page.locator(f"select[name='{field_name}'] option").all_inner_texts()]
 
 
-def _submit_wizard_step(page: Page) -> None:
+def _submit_wizard_step(page: Page, allow_validation_block: bool = False) -> None:
     """The wizard template validates with an ``input``, and its only ``button`` goes back a step."""
-    try:
-        with page.expect_navigation(timeout=WIZARD_NAVIGATION_TIMEOUT_MS):
+    if allow_validation_block:
+        try:
+            with page.expect_navigation(timeout=WIZARD_NAVIGATION_TIMEOUT_MS):
+                page.locator("form input[type='submit']").click()
+        except PlaywrightTimeoutError:
+            pass
+    else:
+        with page.expect_navigation():
             page.locator("form input[type='submit']").click()
-    except PlaywrightTimeoutError:
-        pass
 
 
 def _fill_first_step(page: Page, instance_name: str, quota_scope: str) -> None:
@@ -133,6 +137,15 @@ def _filter_services(admin_page: Page, name: str) -> None:
     admin_page.locator("input[name='name']").fill(name)
     admin_page.get_by_role("button", name="Apply", exact=True).click()
     admin_page.wait_for_load_state()
+
+
+def _filter_docs(page: Page, title: str) -> None:
+    """Finds a doc even when a kept database has more than one table page."""
+    goto_sidebar_entry(page, "Docs")
+    page.locator("a[data-widget='control-sidebar']").first.click()
+    page.locator("input[name='title']").fill(title)
+    page.get_by_role("button", name="Apply", exact=True).click()
+    page.wait_for_load_state()
 
 
 def _open_service(admin_page: Page, name: str) -> None:
@@ -210,8 +223,10 @@ def test_scoped_user_requests_a_virtual_machine_end_to_end(scoped_user_page):
     expect(details).to_contain_text("SUBMITTED")
     expect(details).to_contain_text(instance_name)
     survey = scoped_user_page.locator(".timeline")
-    for answer in ["vcpu", "4", "memory", "16", "environment", "staging"]:
-        expect(survey).to_contain_text(answer)
+    for field, value in [("vcpu", 4), ("memory", 16), ("environment", "staging")]:
+        expect(survey).to_contain_text(
+            re.compile(rf"{re.escape(field)}\s+{re.escape(str(value))}\b", re.IGNORECASE)
+        )
 
     goto_sidebar_entry(scoped_user_page, "Instances")
     expect_table_contains(scoped_user_page, instance_name)
@@ -226,7 +241,7 @@ def test_survey_refuses_a_vcpu_above_the_maximum(scoped_user_page):
     _fill_first_step(scoped_user_page, instance_name, "SRE")
 
     _fill_survey_step(scoped_user_page, vcpu=999, memory=16, environment="dev")
-    _submit_wizard_step(scoped_user_page)
+    _submit_wizard_step(scoped_user_page, allow_validation_block=True)
 
     vcpu_field = scoped_user_page.locator("input[name='1-vcpu']")
     expect(vcpu_field).to_be_visible()
@@ -243,7 +258,7 @@ def test_the_instance_name_is_required_on_the_first_wizard_step(scoped_user_page
     _open_portfolio(scoped_user_page, "Infrastructure")
     _order_service(scoped_user_page, "Virtual machine")
 
-    _submit_wizard_step(scoped_user_page)
+    _submit_wizard_step(scoped_user_page, allow_validation_block=True)
 
     name_field = scoped_user_page.locator("input[name='0-name']")
     expect(name_field).to_be_visible()
@@ -367,7 +382,7 @@ def test_the_doc_list_renders_and_a_doc_opens(admin_page, scoped_user_page):
     admin_page.get_by_role("button", name="Save", exact=True).click()
     admin_page.wait_for_load_state()
 
-    goto_sidebar_entry(scoped_user_page, "Docs")
+    _filter_docs(scoped_user_page, title)
     expect_table_contains(scoped_user_page, title)
     table_row(scoped_user_page, title).get_by_role("link").first.click()
     scoped_user_page.wait_for_load_state()
