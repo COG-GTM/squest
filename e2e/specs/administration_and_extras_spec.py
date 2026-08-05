@@ -77,36 +77,53 @@ def _row_action(page: Page, row_text: str, title: str):
     return _table_row(page, row_text).locator(f"a[title='{title}']")
 
 
+def _wait_for_list_settled(page: Page) -> None:
+    """Waits until a list table is attached, allowing Squest's empty-list page."""
+    page.wait_for_load_state("domcontentloaded")
+    table = page.locator("table.table").first
+    if table.count():
+        table.wait_for(state="attached")
+
+
+def _next_page(page: Page):
+    return page.locator("ul.pagination li:not(.disabled) a").filter(has_text="next").first
+
+
 def _table_row(page: Page, text: str):
     """Walks pagination because E2E_REUSE_DB accumulates rows across runs."""
+    _wait_for_list_settled(page)
     row = helper_table_row(page, text)
-    for _ in range(20):
+    for _ in range(500):
         if row.count():
             return row
-        next_link = page.locator("ul.pagination li:not(.disabled) a").filter(has_text="next")
+        next_link = _next_page(page)
         if not next_link.count():
-            break
-        next_link.click()
-        page.wait_for_load_state()
+            return row
+        with page.expect_navigation():
+            next_link.click()
+        _wait_for_list_settled(page)
         row = helper_table_row(page, text)
-    return row
+    raise AssertionError("pagination exceeded 500 pages while searching for a row")
 
 
 def _expect_no_row(page: Page, text: str) -> None:
     """Asserts no matching row exists on any page of a reused-DB list."""
     first_link = page.locator("ul.pagination").get_by_role("link", name="1", exact=True)
     if first_link.count():
-        first_link.click()
-        page.wait_for_load_state()
+        with page.expect_navigation():
+            first_link.click()
+    _wait_for_list_settled(page)
     row = helper_table_row(page, text)
-    for _ in range(20):
+    for _ in range(500):
         expect(row).to_have_count(0)
-        next_link = page.locator("ul.pagination li:not(.disabled) a").filter(has_text="next")
+        next_link = _next_page(page)
         if not next_link.count():
             return
-        next_link.click()
-        page.wait_for_load_state()
+        with page.expect_navigation():
+            next_link.click()
+        _wait_for_list_settled(page)
         row = helper_table_row(page, text)
+    raise AssertionError("pagination exceeded 500 pages while checking for a row")
 
 
 def _delete_row(page: Page, row_text: str) -> None:
