@@ -1,9 +1,13 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.urls import reverse
 
 from profiles.models import GlobalScope, Role
 from profiles.models.squest_permission import Permission
+from service_catalog.models import Support
 from service_catalog.models.support import SupportState
 from tests.test_service_catalog.base_test_request import BaseTestRequest
 
@@ -26,6 +30,11 @@ class TestAdminSupportBulkActions(BaseTestRequest):
         self.support_test2.state = SupportState.CLOSED
         self.support_test2.save()
         date_opened = self.support_test.date_opened
+        Support.objects.filter(pk=self.support_test.pk).update(
+            last_updated=timezone.now() - timedelta(days=1)
+        )
+        self.support_test.refresh_from_db()
+        last_updated = self.support_test.last_updated
         url = reverse("service_catalog:support_bulk_close")
 
         response = self.client.get(url, data={"selection": [self.support_test.id, self.support_test2.id]})
@@ -40,6 +49,7 @@ class TestAdminSupportBulkActions(BaseTestRequest):
         self.assertEqual(self.support_test.state, SupportState.CLOSED)
         self.assertEqual(self.support_test2.state, SupportState.CLOSED)
         self.assertEqual(self.support_test.date_opened, date_opened)
+        self.assertGreater(self.support_test.last_updated, last_updated)
 
     def test_reopen_mixed_selection_only_reopens_closed_supports(self):
         self.support_test.state = SupportState.CLOSED

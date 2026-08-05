@@ -108,7 +108,7 @@ def support_bulk_close(request):
         button_class="btn-primary",
         icon="fa-check",
         action_url=reverse("service_catalog:support_bulk_close"),
-        save_fields=["state", "date_closed"],
+        save_fields=["state", "date_closed", "last_updated"],
     )
 
 
@@ -125,7 +125,7 @@ def support_bulk_reopen(request):
         button_class="btn-secondary",
         icon="fa-undo",
         action_url=reverse("service_catalog:support_bulk_reopen"),
-        save_fields=["state"],
+        save_fields=["state", "last_updated"],
     )
 
 
