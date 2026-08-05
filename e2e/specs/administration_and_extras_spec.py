@@ -239,7 +239,7 @@ def test_announcement_can_be_edited_and_deleted(admin_page, base_url):
 def _create_announcement(page: Page, base_url: str, title: str, message: str) -> None:
     """Creates an announcement that is live right now, so a user sees it on the home page."""
     now = datetime.now()
-    _goto_sidebar_entry_of(page, base_url, "Announcements")
+    goto_sidebar_entry(page, "Announcements")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='title']", title)
     page.fill("textarea[name='message']", message)
@@ -250,17 +250,11 @@ def _create_announcement(page: Page, base_url: str, title: str, message: str) ->
     expect_no_form_error(page)
 
 
-def _goto_sidebar_entry_of(page: Page, base_url: str, entry: str) -> None:
-    """Navigates through the sidebar, from the home page so that every group is rendered."""
-    page.goto(f"{base_url}/ui/")
-    goto_sidebar_entry(page, entry)
-
-
 def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_page, base_url, scoped_user_page):
     """A custom link is configured by an operator and consumed by a user on their own instance."""
     name = _unique("Runbook")
     text = _unique("Open runbook")
-    _goto_sidebar_entry_of(admin_page, base_url, "Custom links")
+    goto_sidebar_entry(admin_page, "Custom links")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option(admin_page, "services", "Virtual machine")
@@ -271,12 +265,12 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     expect_no_form_error(admin_page)
     expect(_table_row(admin_page, name)).to_have_count(1)
 
-    _goto_sidebar_entry_of(scoped_user_page, base_url, "Instances")
+    goto_sidebar_entry(scoped_user_page, "Instances")
     _table_row(scoped_user_page, "batch-worker-01").get_by_role("link", name="batch-worker-01").click()
     scoped_user_page.wait_for_load_state()
     expect(scoped_user_page.locator(".btn-toolbar")).to_contain_text(text)
 
-    _goto_sidebar_entry_of(admin_page, base_url, "Custom links")
+    goto_sidebar_entry(admin_page, "Custom links")
     _delete_row(admin_page, name)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
     # The list is genuinely empty after deletion, so Squest does not render custom_link_table.
@@ -289,7 +283,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
 def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
     """Only the configuration surface: firing a hook needs a celery worker, which the suite has not."""
     name = _unique("On accepted")
-    _goto_sidebar_entry_of(admin_page, base_url, "Request hook")
+    goto_sidebar_entry(admin_page, "Request hook")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option_containing(admin_page, "operations", "Create virtual machine")
@@ -318,7 +312,7 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url)
 
 def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
     name = _unique("On available")
-    _goto_sidebar_entry_of(admin_page, base_url, "Instance hook")
+    goto_sidebar_entry(admin_page, "Instance hook")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option(admin_page, "services", "Virtual machine")
@@ -348,14 +342,14 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url
 
 
 def _create_email_template(page: Page, base_url: str, name: str, title: str, content: str) -> None:
-    _goto_sidebar_entry_of(page, base_url, "Emails")
+    goto_sidebar_entry(page, "Emails")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='name']", name)
     page.fill("input[name='email_title']", title)
     page.fill("textarea[name='html_content']", content)
     submit_form(page)
     expect_no_form_error(page)
-    _goto_sidebar_entry_of(page, base_url, "Emails")
+    goto_sidebar_entry(page, "Emails")
 
 
 def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
