@@ -163,6 +163,10 @@ input.form-control[disabled] {
     color: #adb5bd !important;
 }
 
+[data-bs-theme="dark"] .text-dark {
+    color: #adb5bd !important;
+}
+
 [data-bs-theme="dark"] .text-purple {
     color: #b197fc !important;
 }
