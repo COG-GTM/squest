@@ -99,3 +99,28 @@ class TestServiceCatalogSupportPermissionsViews(BaseTestRequest, TestPermissionE
             ),
         ]
         self.run_permissions_tests(testing_view_list)
+
+    def test_support_bulk_action_views(self):
+        testing_view_list = [
+            TestingGetContextView(
+                url='service_catalog:support_bulk_close',
+                perm_str_list=['service_catalog.close_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+            TestingPostContextView(
+                url='service_catalog:support_bulk_close',
+                perm_str_list=['service_catalog.close_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+            TestingGetContextView(
+                url='service_catalog:support_bulk_reopen',
+                perm_str_list=['service_catalog.reopen_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+            TestingPostContextView(
+                url='service_catalog:support_bulk_reopen',
+                perm_str_list=['service_catalog.reopen_support'],
+                data={'selection': [self.support_test.id]},
+            ),
+        ]
+        self.run_permissions_tests(testing_view_list)

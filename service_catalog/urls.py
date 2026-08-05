@@ -88,6 +88,8 @@ urlpatterns = [
 
     # Support CRUD
     path('support/', views.SupportListView.as_view(), name='support_list'),
+    path('support/bulk_close/', views.support_bulk_close, name='support_bulk_close'),
+    path('support/bulk_reopen/', views.support_bulk_reopen, name='support_bulk_reopen'),
     # Support CRUD under instance
     path('instance/<int:instance_id>/support/create/', views.support_create, name='support_create'),
     path('instance/<int:instance_id>/support/<int:pk>/', views.support_details, name='support_details'),
