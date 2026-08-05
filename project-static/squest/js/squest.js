@@ -12,12 +12,14 @@ function showToast({title, body, class: toastClass = '', autohide = true, delay 
     toast.setAttribute('aria-live', 'assertive');
     toast.setAttribute('aria-atomic', 'true');
     toast.innerHTML = `
-        <div class="toast-header bg-transparent text-white">
-            <strong class="me-auto">${title}</strong>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        <div class="toast-header bg-transparent">
+            <strong class="me-auto"></strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-        <div class="toast-body">${body}</div>
+        <div class="toast-body"></div>
     `;
+    toast.querySelector('.toast-header strong').textContent = title;
+    toast.querySelector('.toast-body').textContent = body;
     container.appendChild(toast);
     const instance = bootstrap.Toast.getOrCreateInstance(toast, {autohide, delay});
     toast.addEventListener('hidden.bs.toast', () => toast.remove());
