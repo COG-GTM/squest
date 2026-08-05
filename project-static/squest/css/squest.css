@@ -160,7 +160,7 @@ input.form-control[disabled] {
 }
 
 [data-bs-theme="dark"] .text-graphite {
-    color: #adb5bd !important;
+    color: #ced4da !important;
 }
 
 [data-bs-theme="dark"] .text-dark {

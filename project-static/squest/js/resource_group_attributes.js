@@ -1,13 +1,17 @@
 function reset_resource_group_attributes() {
     const select = $("#id_consume_from_attribute_definition");
     select.empty().append(new Option("---------", ""));
-    if ($.fn.selectpicker) {
-        select.selectpicker('refresh');
-    }
+    refresh_resource_group_attributes(select);
 }
 
 function refresh_resource_group_attributes(select) {
     if ($.fn.selectpicker) {
+        const picker = select.data('selectpicker');
+        if (picker && picker.selectpicker) {
+            picker.selectpicker.main.data = [];
+            picker.selectpicker.current.data = [];
+            picker.selectpicker.search.data = [];
+        }
         select.selectpicker('refresh');
     }
 }
