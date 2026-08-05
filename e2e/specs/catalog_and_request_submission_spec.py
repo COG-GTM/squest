@@ -22,7 +22,7 @@ from e2e.helpers import (
 )
 
 DEMO_JOB_TEMPLATE = "Deploy virtual machine (Demo AAP)"
-WIZARD_NAVIGATION_TIMEOUT_MS = 2_000
+WIZARD_NAVIGATION_TIMEOUT_MS = 5_000
 
 
 def _unique(prefix: str) -> str:
@@ -74,11 +74,15 @@ def _option_labels(page: Page, field_name: str) -> list[str]:
 def _submit_wizard_step(page: Page, allow_validation_block: bool = False) -> None:
     """The wizard template validates with an ``input``, and its only ``button`` goes back a step."""
     if allow_validation_block:
+        before_url = page.url
         try:
             with page.expect_navigation(timeout=WIZARD_NAVIGATION_TIMEOUT_MS):
                 page.locator("form input[type='submit']").click()
         except PlaywrightTimeoutError:
-            pass
+            assert page.url == before_url, \
+                "The submit was expected to be blocked by browser validation"
+        else:
+            raise AssertionError("The submit was expected to be blocked by browser validation")
     else:
         with page.expect_navigation():
             page.locator("form input[type='submit']").click()
