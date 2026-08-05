@@ -352,7 +352,7 @@ def test_a_global_role_adds_the_sidebar_entry_it_unlocks(admin_page, role_factor
         if global_scope_url is not None:
             _revoke_user(admin_page, global_scope_url, "bob")
 
-    # back to a page bob may still open: the role list now answers 403, and a 403 has no sidebar
+    # back to a page bob may still open: the role list answers 403 once the role is revoked
     goto_sidebar_entry(scoped_user_page, "Instances")
     entries = visible_sidebar_entries(scoped_user_page)
     assert "Instances" in entries, "bob's own sidebar must still be rendered"
@@ -372,6 +372,11 @@ def test_admin_creates_edits_and_deletes_a_role(admin_page, role_factory):
 
     _header_button(admin_page, "trash").click()
     submit_form(admin_page, "Confirm")
+
+    # the list paginates at 10: a role has to be looked for through the filter, not on page one
+    _filter_list(admin_page, "name", SQUEST_USER_ROLE)
+    expect_table_contains(admin_page, SQUEST_USER_ROLE)
+    _filter_list(admin_page, "name", role)
     expect_table_does_not_contain(admin_page, role)
 
 
@@ -424,7 +429,7 @@ def test_admin_browses_the_user_list_and_a_user_detail_page(admin_page):
 
 def test_scoped_user_cannot_reach_the_access_administration_pages(scoped_user_page, base_url):
     """bob holds the 'Squest user' role on his own scopes only: no user, role or global scope page."""
-    # read the sidebar once, off a normal page: a 403 answer renders no sidebar to look at
+    # read the sidebar once, off a normal page bob may open, before walking the refused ones
     entries = visible_sidebar_entries(scoped_user_page)
     for name, path in [("Users", NAV_MAP["Access"]["Users"]),
                        ("Role", NAV_MAP["Administration"]["Role"]),
