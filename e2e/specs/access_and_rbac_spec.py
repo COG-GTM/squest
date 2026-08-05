@@ -136,8 +136,10 @@ def _revoke_user(page, scope_url, username):
     # only exists once the scope holds a user
     if page.locator("#tabs").get_by_role("link", name="Users", exact=True).count() == 1:
         _open_tab(page, "Users")
+        row = _tab_rows(page, "users", username)  # every other pane is in the DOM too
+    else:
+        row = table_row(page, username)
     page.locator("table tbody").first.wait_for(state="attached")
-    row = table_row(page, username)
     if row.count() == 0:
         return
     row.locator("a.btn-danger").first.click()
@@ -335,7 +337,7 @@ def test_a_role_on_an_organization_reveals_its_instances(admin_page, login_as, b
     expect_table_does_not_contain(carol_page, SEEDED_ORGANIZATION_INSTANCE)
 
 
-def test_a_global_role_adds_the_sidebar_entry_it_unlocks(admin_page, role_factory, scoped_user_page):
+def test_a_global_role_adds_the_sidebar_entry_it_unlocks(admin_page, role_factory, scoped_user_page, base_url):
     """The sidebar is permission driven: a role granted on the global scope shows up in it."""
     role, _ = role_factory(["list_role", "view_role"])
     assert "Role" not in visible_sidebar_entries(scoped_user_page)
@@ -356,7 +358,10 @@ def test_a_global_role_adds_the_sidebar_entry_it_unlocks(admin_page, role_factor
         if global_scope_url is not None:
             _revoke_user(admin_page, global_scope_url, "bob")
 
-    # back to a page bob may still open: the role list answers 403 once the role is revoked
+    role_list = f"{base_url}{NAV_MAP['Administration']['Role']}"
+    assert scoped_user_page.goto(role_list).status == 403, "the role list must be refused once the role is revoked"
+
+    # the sidebar has to be read off a page bob may still open, not off that 403
     goto_sidebar_entry(scoped_user_page, "Instances")
     entries = visible_sidebar_entries(scoped_user_page)
     assert "Instances" in entries, "bob's own sidebar must still be rendered"
