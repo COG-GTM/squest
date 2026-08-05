@@ -9,7 +9,11 @@
     <script>
         (function () {
             const theme = "{% if request.user.is_authenticated and request.user.profile.theme == 'dark' %}dark{% else %}light{% endif %}";
-            localStorage.setItem('lte-theme', theme);
+            try {
+                localStorage.setItem('lte-theme', theme);
+            } catch (e) {
+                // localStorage may be unavailable; the theme still applies for this page.
+            }
             document.documentElement.setAttribute('data-bs-theme', theme);
             document.documentElement.style.colorScheme = theme;
         })();
