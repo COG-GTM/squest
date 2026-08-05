@@ -204,6 +204,9 @@ class Command(BaseCommand):
             )
             if created:
                 instance.state = state
+                if state == InstanceState.AVAILABLE:
+                    # normally set by the FSM transition, and the instance list shows the column
+                    instance.date_available = timezone.now()
                 instance.save()
             instances[name] = instance
         return instances
