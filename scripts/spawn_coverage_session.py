@@ -39,17 +39,28 @@ gate re-runs. Constraints:
 """
 
 
+def required(name):
+    """Read a required variable, reporting an unconfigured repository instead of a bare KeyError."""
+    try:
+        return os.environ[name]
+    except KeyError:
+        raise SystemExit(f"{name} is not set: the coverage backfill session cannot be created")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it")
     args = parser.parse_args()
 
-    org_id = os.environ["DEVIN_ORG_ID"]
+    org_id = required("DEVIN_ORG_ID")
     base_url = os.environ.get("DEVIN_BASE_URL", "https://api.devin.ai").rstrip("/")
-    repo = os.environ["REPO"]
-    pr_number = os.environ["PR_NUMBER"]
-    branch = os.environ["PR_BRANCH"]
-    report = Path(os.environ.get("PATCH_COVERAGE_REPORT", "patch-coverage.md")).read_text().strip()
+    repo = required("REPO")
+    pr_number = required("PR_NUMBER")
+    branch = required("PR_BRANCH")
+    report_path = Path(os.environ.get("PATCH_COVERAGE_REPORT", "patch-coverage.md"))
+    if not report_path.is_file():
+        raise SystemExit(f"{report_path} is missing: run scripts/patch_coverage.py --report first")
+    report = report_path.read_text().strip()
 
     payload = {
         "prompt": PROMPT.format(repo=repo, pr_number=pr_number, branch=branch, report=report),
@@ -70,7 +81,7 @@ def main():
         url,
         data=json.dumps(payload).encode(),
         headers={
-            "Authorization": f"Bearer {os.environ['DEVIN_API_KEY']}",
+            "Authorization": f"Bearer {required('DEVIN_API_KEY')}",
             "Content-Type": "application/json",
         },
         method="POST",

@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      issues: write  # the coverage backfill label is created through the labels API
     strategy:
       matrix:
         python-version: ['3.12']
@@ -79,13 +80,15 @@ jobs:
 
       - name: Check whether the PR only touches tests
         id: diff-scope
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
         run: |
-          changed=$(git diff --merge-base --name-only origin/${{ github.base_ref }})
+          # a failing git diff aborts the step, so an empty list really does mean "nothing changed"
+          changed=$(git diff --merge-base --name-only "$BASE_REF")
           if [ -z "$changed" ]; then
-            echo "No changed files resolved against origin/${{ github.base_ref }} - the merge base is wrong"
-            exit 1
-          fi
-          if echo "$changed" | grep -qvE '^tests/'; then
+            echo "No files changed against $BASE_REF - skipping the patch coverage gate"
+            echo "tests_only=true" >> "$GITHUB_OUTPUT"
+          elif echo "$changed" | grep -qvE '^tests/'; then
             echo "tests_only=false" >> "$GITHUB_OUTPUT"
           else
             echo "tests_only=true" >> "$GITHUB_OUTPUT"
@@ -94,12 +97,22 @@ jobs:
       - name: Check patch coverage
         id: patch-coverage
         if: steps.diff-scope.outputs.tests_only == 'false'
-        continue-on-error: true  # the gate is enforced at the end, after a backfill session is spawned
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
         run: |
+          # exit 1 means "below threshold" and drives the gate below; any other non-zero status is a
+          # broken check and fails here, so a crash is never reported as a coverage regression
+          set +e
           poetry run python scripts/patch_coverage.py \
-            --base-ref origin/${{ github.base_ref }} \
-            --fail-under ${{ env.PATCH_COVERAGE_THRESHOLD }} \
+            --base-ref "$BASE_REF" \
+            --fail-under "$PATCH_COVERAGE_THRESHOLD" \
             --report patch-coverage.md
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi
 
       - name: Publish the patch coverage report
         if: always() && hashFiles('patch-coverage.md') != ''
@@ -111,7 +124,7 @@ jobs:
         # only once per PR: the label added below stops the session's own push from spawning another.
         # fork PRs are excluded: they get no secrets and their head branch is not in this repository
         if: >-
-          steps.patch-coverage.outcome == 'failure' &&
+          steps.patch-coverage.outputs.status == '1' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
           !contains(github.event.pull_request.labels.*.name, env.COVERAGE_BACKFILL_LABEL)
         env:
@@ -144,7 +157,7 @@ jobs:
         if: always()  # a failure to spawn or comment must not hide a coverage regression
         run: |
           poetry run coverage report --fail-under=${{ env.PROJECT_COVERAGE_THRESHOLD }}
-          if [ "${{ steps.patch-coverage.outcome }}" = "failure" ]; then
+          if [ "${{ steps.patch-coverage.outputs.status }}" = "1" ]; then
             echo "Patch coverage below ${{ env.PATCH_COVERAGE_THRESHOLD }}% - see the 'Check patch coverage' step"
             exit 1
           fi

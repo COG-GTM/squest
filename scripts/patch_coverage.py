@@ -141,4 +141,10 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # exit 1 means "below threshold" and drives the gate; anything unexpected exits 2 so the workflow
+    # can tell a coverage regression apart from a broken check
+    try:
+        sys.exit(main())
+    except Exception as error:
+        print(f"patch coverage check failed to run: {type(error).__name__}: {error}", file=sys.stderr)
+        sys.exit(2)
