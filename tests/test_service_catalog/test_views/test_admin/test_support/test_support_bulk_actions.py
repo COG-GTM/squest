@@ -25,6 +25,7 @@ class TestAdminSupportBulkActions(BaseTestRequest):
     def test_close_mixed_selection_only_closes_open_supports(self):
         self.support_test2.state = SupportState.CLOSED
         self.support_test2.save()
+        date_opened = self.support_test.date_opened
         url = reverse("service_catalog:support_bulk_close")
 
         response = self.client.get(url, data={"selection": [self.support_test.id, self.support_test2.id]})
@@ -38,6 +39,7 @@ class TestAdminSupportBulkActions(BaseTestRequest):
         self.support_test2.refresh_from_db()
         self.assertEqual(self.support_test.state, SupportState.CLOSED)
         self.assertEqual(self.support_test2.state, SupportState.CLOSED)
+        self.assertEqual(self.support_test.date_opened, date_opened)
 
     def test_reopen_mixed_selection_only_reopens_closed_supports(self):
         self.support_test.state = SupportState.CLOSED

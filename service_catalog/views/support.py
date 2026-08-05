@@ -50,6 +50,7 @@ def _support_bulk_action(
     button_class,
     icon,
     action_url,
+    save_fields,
 ):
     if request.method not in ("GET", "POST"):
         return HttpResponseNotAllowed(["GET", "POST"])
@@ -90,7 +91,7 @@ def _support_bulk_action(
         transition_method = transition(support)
         if can_proceed(transition_method):
             transition_method()
-            support.save()
+            support.save(update_fields=save_fields)
     return redirect("service_catalog:support_list")
 
 
@@ -107,6 +108,7 @@ def support_bulk_close(request):
         button_class="btn-primary",
         icon="fa-check",
         action_url=reverse("service_catalog:support_bulk_close"),
+        save_fields=["state", "date_closed"],
     )
 
 
@@ -123,6 +125,7 @@ def support_bulk_reopen(request):
         button_class="btn-secondary",
         icon="fa-undo",
         action_url=reverse("service_catalog:support_bulk_reopen"),
+        save_fields=["state"],
     )
 
 
