@@ -3,6 +3,11 @@ name: On pull request
 on: [pull_request]  # set to this value when pushing in prod
 #on: [push] # set this one for dev the ci/cd
 
+# one run per PR: two pushes in quick succession must not both reach the spawn step
+concurrency:
+  group: on-pull-request-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   DJANGO_SETTINGS_MODULE: Squest.settings
   PROJECT_COVERAGE_THRESHOLD: '90'
@@ -121,14 +126,29 @@ jobs:
         run: |
           cat patch-coverage.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Spawn a Devin session to backfill the missing tests
-        id: spawn-session
-        # only once per PR: the label added afterwards stops the session's own push from spawning another.
-        # fork PRs are excluded: they get no secrets and their head branch is not in this repository
+      - name: Check whether this PR already had a backfill session
+        id: backfill-state
+        # the labels in the event payload are a snapshot taken before this run's own labelling step,
+        # so a re-run would replay a label-free payload; read the current labels instead.
+        # fork PRs are excluded here: they get no secrets and their head branch is not in this repository
         if: >-
           steps.patch-coverage.outputs.status == '1' &&
-          github.event.pull_request.head.repo.full_name == github.repository &&
-          !contains(github.event.pull_request.labels.*.name, env.COVERAGE_BACKFILL_LABEL)
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          labels=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')
+          if echo "$labels" | grep -qxF "$COVERAGE_BACKFILL_LABEL"; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Spawn a Devin session to backfill the missing tests
+        id: spawn-session
+        # only once per PR: the label added afterwards stops the session's own push from spawning another
+        if: steps.backfill-state.outputs.already == 'false'
         env:
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
