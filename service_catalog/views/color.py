@@ -7,7 +7,7 @@ map_dict_request_state = {
     RequestState.ON_HOLD: "warning",
     RequestState.SUBMITTED: "info",
     RequestState.REJECTED: "dark",
-    RequestState.PROCESSING: "warning",
+    RequestState.PROCESSING: "orange",
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",

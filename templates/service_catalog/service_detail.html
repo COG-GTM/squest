@@ -18,7 +18,7 @@
     <div class="container-fluid">
         <div class="row">
             <section class="col-lg-3">
-                <div class="card card-default">
+                <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">{{ object.name }}</h3>
                     </div>
@@ -30,7 +30,7 @@
                                     {% if object.image %}{{ object.image.url }}{% else %}{% static '/squest/img/no_image.png' %}{% endif %}"
                                  alt="Service image">
                         </div>
-                        <ul class="list-group list-group-unbordered mb-3">
+                        <ul class="list-group list-group-flush mb-3">
                             <li class="list-group-item border-bottom-0">
                                 <b>Enabled</b>
                                 <div class="float-end">

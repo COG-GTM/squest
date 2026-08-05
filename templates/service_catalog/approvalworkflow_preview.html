@@ -32,7 +32,7 @@
 
                         <div>
                             {% for approval_step in object.approval_steps.all %}
-                                <div id="{{ approval_step.id }}" class="card card-default">
+                                <div id="{{ approval_step.id }}" class="card">
                                     <div class="card-header">
                                         <h3 class="card-title"><strong>{{ approval_step.name }}</strong></h3>
                                     </div>
@@ -121,9 +121,4 @@
 {% endblock %}
 {% block custom_script %}
     <script>add_tab_management();</script>
-    <script>
-        document.querySelectorAll('[data-bs-toggle="popover"]').forEach((element) => {
-            new bootstrap.Popover(element);
-        });
-    </script>
 {% endblock %}

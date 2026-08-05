@@ -89,3 +89,24 @@ input.form-control[disabled] {
 .callout a{
     color: unset;
 }
+
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-orange: #fd7e14;
+    --bs-orange-rgb: 253, 126, 20;
+}
+
+.bg-orange {
+    --bs-bg-opacity: 1;
+    background-color: rgba(var(--bs-orange-rgb), var(--bs-bg-opacity)) !important;
+}
+
+.text-orange {
+    color: var(--bs-orange) !important;
+}
+
+.text-bg-orange {
+    color: #000 !important;
+    background-color: rgba(var(--bs-orange-rgb), var(--bs-bg-opacity, 1)) !important;
+}

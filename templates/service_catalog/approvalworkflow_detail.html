@@ -18,12 +18,12 @@
 <div class="container-fluid">
     <div class="row">
         <section class="col-lg-3">
-            <div class="card card-default">
+            <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">{{ object.name }}</h3>
                 </div>
                 <div class="card-body">
-                    <ul class="list-group list-group-unbordered mb-3">
+                    <ul class="list-group list-group-flush mb-3">
                         <li class="list-group-item border-top-0">
                             <b>ID</b><span class="float-end">{{ object.id }}</span>
                         </li>
@@ -105,7 +105,7 @@
                             <div id="draggableApprovalStepList"
                                  data-url-sync-step="{% url 'service_catalog:ajax_approval_step_position_update' %}">
                                 {% for approval_step in object.approval_steps.all|dictsort:"position" %}
-                                    <div id="{{ approval_step.id }}" class="card card-default">
+                                    <div id="{{ approval_step.id }}" class="card">
                                         <div class="card-header">
                                             <h3 class="card-title"><strong>{{ approval_step.name }}</strong></h3>
                                             <div class="card-tools">

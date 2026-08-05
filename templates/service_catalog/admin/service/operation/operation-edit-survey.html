@@ -66,7 +66,7 @@
                       method="post">{% csrf_token %}
                     {{ formset.management_form }}
                     {% for form in formset %}
-                        <div class="card card-default">
+                        <div class="card">
                             <div class="card-header">
                                 <h3 class="card-title text-primary"><strong>{{ form.instance.variable }}</strong> -
                                     <span class="text-muted">{{ form.instance.type }}</span></h3>
