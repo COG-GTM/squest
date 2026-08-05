@@ -50,7 +50,18 @@ social-auth-app-django = {extras = ["openidconnect"], version = "5.4.1"}
 python-jose = "3.4.0"
 
 [tool.poetry.group.test.dependencies]
+pytest = "9.1.1"
+pytest-playwright = "0.8.0"
+playwright = "1.61.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+# the end to end suite only. `manage.py test` keeps owning the unit tests, and the *_spec.py naming
+# keeps its test*.py discovery from ever importing a Playwright spec.
+testpaths = ["e2e"]
+pythonpath = ["."]
+python_files = ["*_spec.py"]
+addopts = "--strict-markers"
