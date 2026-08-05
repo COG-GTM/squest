@@ -12,7 +12,7 @@
             <div class="row">
                 <div class="col-lg col">
                     <div class="alert alert-{{ announcement.type|lower }} alert-dismissible">
-                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         <h4><i class="icon {{ announcement.type|map_color_to_icon }}"></i> {{ announcement.title }}</h4>
                         {{ announcement.message | safe }}
                     </div>
@@ -20,9 +20,9 @@
             </div>
         {% endfor %}
         <div class="row">
-            <div style="flex-grow: 8">
+            <div class="col-lg-8">
                 {% if service_details %}
-                    <div class="card ml-2">
+                    <div class="card ms-2">
                         <div class="card-header">
                             <h3 class="card-title">Service overview</h3>
                         </div>
@@ -90,7 +90,7 @@
                                         <td class="align-middle text-center">
                                             {% if service.processing_requests %}
                                                 <a href="{% url 'service_catalog:request_list' %}?state=6&instance__service__id={{ service.service.id }}"
-                                                   class="btn text-white bg-orange btn-lg">{{ service.processing_requests }}
+                                                   class="btn btn-warning btn-lg">{{ service.processing_requests }}
                                                 </a>
                                             {% endif %}
                                         </td>
@@ -117,7 +117,7 @@
                     </div>
                 {% endif %}
                 {% if request_waiting_for_action_table %}
-                    <div class="card ml-2">
+                    <div class="card ms-2">
                         <div class="card-header">
                             <h3 class="card-title">To be reviewed</h3>
                         </div>
@@ -127,16 +127,16 @@
                     </div>
                 {% endif %}
             </div>
-            <div style="flex-grow: 4">
+            <div class="col-lg-4">
                 {% if can_list_instance %}
                     <div class="col-12">
                         <!-- small card -->
-                        <div class="h-100 small-box d-flex flex-column bg-{% if total_instance > 0 %}success{% else %}default{% endif %}">
+                        <div class="h-100 small-box d-flex flex-column {% if total_instance > 0 %}text-bg-success{% else %}text-bg-secondary{% endif %}">
                             <div class="inner flex-grow-1">
                                 <h3>{{ total_instance }}</h3>
                                 <p>Available instances</p>
                             </div>
-                            <div class="icon">
+                            <div class="small-box-icon">
                                 <i class="fas fa-th"></i>
                             </div>
                             <a href="{% url 'service_catalog:instance_list' %}?state=10"
@@ -148,13 +148,13 @@
                 {% endif %}
                 {% if can_list_request %}
                     <div class="col-12">
-                        <div class="h-100 small-box d-flex flex-column bg-{% if total_request > 0 %}info{% else %}default{% endif %}">
+                        <div class="h-100 small-box d-flex flex-column {% if total_request > 0 %}text-bg-info{% else %}text-bg-secondary{% endif %}">
                             <!-- small card -->
                             <div class="inner flex-grow-1">
                                 <h3>{{ total_request }}</h3>
                                 <p>Submitted requests</p>
                             </div>
-                            <div class="icon">
+                            <div class="small-box-icon">
                                 <i class="fas fa-shopping-cart"></i>
                             </div>
                             <a href="{% url 'service_catalog:request_list' %}?state=1"
@@ -168,12 +168,12 @@
                 {% if can_list_support %}
                     <div class="col-12">
                         <!-- small card -->
-                        <div class="h-100 small-box d-flex flex-column bg-{% if total_support_opened > 0 %}warning{% else %}default{% endif %}">
+                        <div class="h-100 small-box d-flex flex-column {% if total_support_opened > 0 %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
                             <div class="inner flex-grow-1">
                                 <h3>{{ total_support_opened }}</h3>
                                 <p>Opened supports</p>
                             </div>
-                            <div class="icon">
+                            <div class="small-box-icon">
                                 <i class="fas fa-medkit"></i>
                             </div>
                             <a href="{% url 'service_catalog:support_list' %}?state=1"
@@ -186,12 +186,12 @@
                 {% if can_list_user %}
                     <div class="col-12">
                         <!-- small card -->
-                        <div class="h-100 small-box d-flex flex-column bg-default">
+                        <div class="h-100 small-box d-flex flex-column text-bg-secondary">
                             <div class="inner flex-grow-1">
                                 <h3>{{ total_user }}</h3>
                                 <p>Users</p>
                             </div>
-                            <div class="icon">
+                            <div class="small-box-icon">
                                 <i class="fas fa-user-plus"></i>
                             </div>
                             <a href="{% url 'profiles:user_list' %}" class="small-box-footer">
@@ -204,12 +204,12 @@
                     {% if user_without_organization > 0 %}
                         <div class="col-12">
                             <!-- small card -->
-                            <div class="h-100 small-box d-flex flex-column bg-pink">
+                            <div class="h-100 small-box d-flex flex-column text-bg-danger">
                                 <div class="inner flex-grow-1">
                                     <h3>{{ user_without_organization }}</h3>
                                     <p>Users without organization</p>
                                 </div>
-                                <div class="icon">
+                                <div class="small-box-icon">
                                     <i class="fas fa-users-slash"></i>
                                 </div>
                                 <a href="{% url 'profiles:user_list' %}?no_organization=on" class="small-box-footer">
