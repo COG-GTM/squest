@@ -84,7 +84,7 @@ jobs:
           BASE_REF: origin/${{ github.base_ref }}
         run: |
           # a failing git diff aborts the step, so an empty list really does mean "nothing changed"
-          changed=$(git diff --merge-base --name-only "$BASE_REF")
+          changed=$(git diff --merge-base --name-only "$BASE_REF" HEAD)
           if [ -z "$changed" ]; then
             echo "No files changed against $BASE_REF - skipping the patch coverage gate"
             echo "tests_only=true" >> "$GITHUB_OUTPUT"
@@ -101,9 +101,10 @@ jobs:
           BASE_REF: origin/${{ github.base_ref }}
         run: |
           # exit 1 means "below threshold" and drives the gate below; any other non-zero status is a
-          # broken check and fails here, so a crash is never reported as a coverage regression
+          # broken check and fails here, so a crash is never reported as a coverage regression.
+          # the helper is stdlib-only and runs outside poetry, so a broken venv cannot exit 1 in its place
           set +e
-          poetry run python scripts/patch_coverage.py \
+          python scripts/patch_coverage.py \
             --base-ref "$BASE_REF" \
             --fail-under "$PATCH_COVERAGE_THRESHOLD" \
             --report patch-coverage.md

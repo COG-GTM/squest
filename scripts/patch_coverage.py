@@ -25,7 +25,8 @@ def run(*args):
 
 def changed_lines(base_ref):
     """Map each changed Python file to the set of line numbers it added or modified."""
-    diff = run("git", "diff", "--merge-base", "--unified=0", base_ref, "--", "*.py")
+    # HEAD is explicit so an earlier step touching a tracked file cannot leak into the patch
+    diff = run("git", "diff", "--merge-base", "--unified=0", base_ref, "HEAD", "--", "*.py")
     per_file = {}
     current = None
     in_hunks = False

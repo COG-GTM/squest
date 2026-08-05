@@ -93,12 +93,13 @@ def main():
         },
         method="POST",
     )
+    body = b""
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
+            # the POST has been accepted here, so a session exists: record that before reading the body,
+            # since the workflow uses it to decide whether the PR already had its one backfill session
+            set_output("session_created", "true")
             body = response.read()
-        # from here on a session exists, so say so before anything else can fail: the workflow uses this
-        # to decide whether the PR has already had its one backfill session
-        set_output("session_created", "true")
         session = json.loads(body)
         session_url = session.get("url") or f"https://app.devin.ai/sessions/{session['session_id']}"
     except urllib.error.HTTPError as error:
