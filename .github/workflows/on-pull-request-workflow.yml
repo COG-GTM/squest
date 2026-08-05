@@ -137,21 +137,31 @@ jobs:
         run: |
           python scripts/spawn_coverage_session.py
 
+      - name: Label the PR as backfilled
+        # runs on any spawn attempt: a session may exist even when the step failed afterwards, and the
+        # label is the only thing stopping the next push from spawning a second one
+        if: always() && steps.spawn-session.conclusion != 'skipped'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh label create "$COVERAGE_BACKFILL_LABEL" --description "A Devin session was spawned to backfill coverage" || true
+          gh pr edit "$PR_NUMBER" --add-label "$COVERAGE_BACKFILL_LABEL"
+
       - name: Comment the spawned session on the PR
         if: steps.spawn-session.outcome == 'success' && steps.spawn-session.outputs.session_url != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SESSION_URL: ${{ steps.spawn-session.outputs.session_url }}
         run: |
           {
-            echo "Patch coverage is below ${{ env.PATCH_COVERAGE_THRESHOLD }}%, so a Devin session was started to backfill tests for the symbols this PR left uncovered: ${{ steps.spawn-session.outputs.session_url }}"
+            echo "Patch coverage is below $PATCH_COVERAGE_THRESHOLD%, so a Devin session was started to backfill tests for the symbols this PR left uncovered: $SESSION_URL"
             echo
             echo '```'
             cat patch-coverage.md
             echo '```'
-          } | gh pr comment ${{ github.event.pull_request.number }} --body-file -
-          # the label is what stops a second session from being spawned, so create it if it is missing
-          gh label create "${{ env.COVERAGE_BACKFILL_LABEL }}" --description "A Devin session was spawned to backfill coverage" || true
-          gh pr edit ${{ github.event.pull_request.number }} --add-label "${{ env.COVERAGE_BACKFILL_LABEL }}"
+          } | gh pr comment "$PR_NUMBER" --body-file -
 
       - name: Enforce coverage gates
         if: always()  # a failure to spawn or comment must not hide a coverage regression
