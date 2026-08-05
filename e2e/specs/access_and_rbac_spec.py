@@ -140,12 +140,11 @@ def _revoke_user(page, scope_url, username):
     page.goto(scope_url)
     # an org/team page keeps its users behind a tab, next to panes that are in the DOM as well; the
     # global scope page has no tabs at all and renders its users table directly
-    if page.locator("#tabs").count() == 1:
-        _open_tab(page, "Users")
-        row = _tab_rows(page, "users", username)
-    else:
-        row = table_row(page, username)
+    tabbed = page.locator("#tabs").count() == 1
+    row = _tab_rows(page, "users", username) if tabbed else table_row(page, username)
     try:
+        if tabbed:
+            _open_tab(page, "Users")
         # waited for rather than counted: a snapshot cannot tell "revoked" from "not rendered yet"
         row.first.wait_for(state="attached", timeout=5000)
     except PlaywrightTimeoutError:
