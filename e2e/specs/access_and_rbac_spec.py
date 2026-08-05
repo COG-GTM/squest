@@ -152,6 +152,10 @@ def _revoke_user(page, scope_url, username):
     row.locator("a.btn-danger").first.click()
     page.wait_for_load_state()
     submit_form(page, "Confirm")
+    if tabbed:
+        _open_tab(page, "Users")
+    # a revoke that quietly did nothing would leak the grant into every later spec of the session
+    expect(row).to_have_count(0)
 
 
 @pytest.fixture
@@ -220,7 +224,7 @@ def role_factory(admin_page):
 
 
 def test_admin_creates_an_organization_and_reaches_its_detail_page(admin_page, organization_factory):
-    name, url = organization_factory()
+    name, _ = organization_factory()
 
     expect(admin_page.locator("body")).to_contain_text(f"Organization of {name}")
     _open_tab(admin_page, "Roles")
@@ -233,7 +237,7 @@ def test_admin_creates_an_organization_and_reaches_its_detail_page(admin_page, o
 
 
 def test_admin_edits_an_organization(admin_page, organization_factory):
-    name, url = organization_factory()
+    name, _ = organization_factory()
     renamed = f"{name}-renamed"
 
     _header_button(admin_page, "pencil-alt").click()
@@ -330,7 +334,7 @@ def test_an_organization_stays_invisible_until_a_role_is_granted_in_it(admin_pag
     expect(_card_title(carol_page)).to_contain_text(name)
 
 
-def test_a_role_on_an_organization_reveals_its_instances(admin_page, login_as, base_url):
+def test_a_role_on_an_organization_reveals_its_instances(admin_page, login_as):
     """carol is a Marketing user: the instances of another organization appear only with a role."""
     organization_url = None
     try:
