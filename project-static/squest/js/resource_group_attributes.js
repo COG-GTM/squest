@@ -3,10 +3,6 @@ function reset_resource_group_attributes() {
     select.empty().append(new Option("---------", ""));
     if ($.fn.selectpicker) {
         select.selectpicker('refresh');
-    } else {
-        window.setTimeout(function () {
-            refresh_resource_group_attributes(select);
-        }, 0);
     }
 }
 
