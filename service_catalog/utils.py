@@ -3,6 +3,7 @@ import re
 
 
 def get_orderable_services_for_user(user, parent_portfolio_id=None, filter_by_portfolio=True):
+    # imports are local: this module is imported by Squest.settings, before the app registry is ready
     from django.db.models import Q
 
     from profiles.models import Permission
