@@ -72,18 +72,21 @@ def _show_all_filtered_rows(page):
     page.wait_for_load_state()
 
 
+def _click_navigation(page, locator):
+    with page.expect_navigation():
+        locator.click()
+
+
 def _goto_resource_group_attributes(page, group_name):
     """The transformer list of a group, through the attribute count button of its list row."""
     _goto_named_list_row(page, "Resource groups", group_name)
-    table_row(page, group_name).locator("a[href$='/attribute/']").click()
-    page.wait_for_load_state()
+    _click_navigation(page, table_row(page, group_name).locator("a[href$='/attribute/']"))
 
 
 def _goto_resource_group_resources(page, group_name):
     """The resource list of a group, through the resource count button of its list row."""
     _goto_named_list_row(page, "Resource groups", group_name)
-    table_row(page, group_name).locator("a[href$='/resource/']").click()
-    page.wait_for_load_state()
+    _click_navigation(page, table_row(page, group_name).locator("a[href$='/resource/']"))
 
 
 def _add_transformer(page, group_name, attribute, consume_from_group=None, consume_from_attribute=None):
@@ -98,8 +101,7 @@ def _add_transformer(page, group_name, attribute, consume_from_group=None, consu
                                      has_text=consume_from_attribute)
         expect(target_option).to_have_count(1)
         page.select_option("#id_consume_from_attribute_definition", label=consume_from_attribute)
-    page.get_by_role("button", name="Add attribute").click()
-    page.wait_for_load_state()
+    submit_form(page, "Add attribute")
 
 
 def _create_resource(page, group_name, name, attribute_values):
@@ -113,8 +115,7 @@ def _create_resource(page, group_name, name, attribute_values):
 
 def _edit_resource(page, group_name, name, attribute_values):
     _goto_resource_group_resources(page, group_name)
-    table_row(page, name).locator("a[href*='/edit/']").click()
-    page.wait_for_load_state()
+    _click_navigation(page, table_row(page, name).locator("a[href*='/edit/']"))
     for attribute, value in attribute_values.items():
         page.get_by_label(attribute, exact=True).fill(str(value))
     submit_form(page, "Update")
@@ -158,8 +159,7 @@ def _group_totals(page, group_name):
 def _goto_scope_quotas(page, scope_entry, scope_name):
     """A scope detail page, opened on its quota tab: Access -> Organization|Team -> the scope."""
     _goto_named_list_row(page, scope_entry, scope_name)
-    table_row(page, scope_name).get_by_role("link", name=scope_name, exact=True).first.click()
-    page.wait_for_load_state()
+    _click_navigation(page, table_row(page, scope_name).get_by_role("link", name=scope_name, exact=True).first)
     page.get_by_role("link", name="Quotas", exact=True).click()
 
 
