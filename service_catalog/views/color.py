@@ -3,7 +3,8 @@ from service_catalog.models.instance import InstanceState
 from service_catalog.models.request import RequestState
 
 # State colors are used by both `text-*` and `text-bg-*`; keep every value
-# legible in both contexts, including the custom orange defined in squest.css.
+# legible in both light and dark contexts. Custom orange, graphite, purple,
+# and teal utilities are defined in squest.css for distinct state mappings.
 map_dict_request_state = {
     RequestState.ACCEPTED: "primary",
     RequestState.ON_HOLD: "warning",
@@ -13,7 +14,7 @@ map_dict_request_state = {
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",
-    RequestState.ARCHIVED: "warning"
+    RequestState.ARCHIVED: "graphite"
 }
 
 map_dict_instance_state = {
@@ -21,13 +22,13 @@ map_dict_instance_state = {
     InstanceState.PROVISIONING: "primary",
     InstanceState.PROVISION_FAILED: "warning",
     InstanceState.AVAILABLE: "success",
-    InstanceState.DELETE_FAILED: "warning",
-    InstanceState.DELETING: "primary",
-    InstanceState.UPDATING: "primary",
-    InstanceState.UPDATE_FAILED: "warning",
-    InstanceState.DELETED: "danger",
-    InstanceState.ARCHIVED: "dark",
-    InstanceState.ABORTED: "info",
+    InstanceState.DELETE_FAILED: "danger",
+    InstanceState.DELETING: "orange",
+    InstanceState.UPDATING: "info",
+    InstanceState.UPDATE_FAILED: "purple",
+    InstanceState.DELETED: "dark",
+    InstanceState.ARCHIVED: "graphite",
+    InstanceState.ABORTED: "teal",
 }
 
 map_dict_step_state = {
