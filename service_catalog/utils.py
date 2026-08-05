@@ -77,7 +77,7 @@ def mask_sensitive_keys(data, sensitive_keys=None):
     if isinstance(data, dict):
         masked = dict()
         for key, value in data.items():
-            if any(sensitive in key.lower() for sensitive in sensitive_keys):
+            if isinstance(key, str) and any(sensitive in key.lower() for sensitive in sensitive_keys):
                 masked[key] = "******"
             else:
                 masked[key] = mask_sensitive_keys(value, sensitive_keys)
@@ -95,6 +95,8 @@ def truncate_string(text, max_length=50, suffix="..."):
         return ""
     if len(text) <= max_length:
         return text
+    if max_length <= len(suffix):
+        return text[:max_length]
     return text[:max_length - len(suffix)] + suffix
 
 
