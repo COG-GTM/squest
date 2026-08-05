@@ -1,6 +1,9 @@
 function reset_resource_group_attributes() {
     const select = $("#id_consume_from_attribute_definition");
-    select.empty().append(new Option("---------", "")).selectpicker('refresh');
+    select.empty().append(new Option("---------", ""));
+    if ($.fn.selectpicker) {
+        select.selectpicker('refresh');
+    }
 }
 
 function load_resource_group_attributes(target_resource_group_id){

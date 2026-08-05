@@ -54,11 +54,11 @@
     {% load static %}
     <script src="{% static 'squest/js/resource_group_attributes.js' %}"></script>
     <script>
-        load_resource_group_attributes();
-        // on resource group change we update the list of attribute
-        $("#id_consume_from_resource_group").change(function () {
-            load_resource_group_attributes($(this).val(), );
+        $(function () {
+            load_resource_group_attributes();
+            $("#id_consume_from_resource_group").change(function () {
+                load_resource_group_attributes($(this).val());
+            });
         });
-
     </script>
 {% endblock %}

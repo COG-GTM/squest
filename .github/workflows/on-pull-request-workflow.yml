@@ -55,6 +55,10 @@ jobs:
         run: |
           poetry run coverage run --source='.' manage.py test
 
+      - name: Check static references
+        run: |
+          poetry run python scripts/check_static_refs.py
+
       - name: Run coverage report
         run: |
           poetry run coverage report
