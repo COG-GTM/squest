@@ -6,15 +6,18 @@ function showToast({title, body, class: toastClass = '', autohide = true, delay 
         document.body.appendChild(container);
     }
 
+    const normalizedClass = toastClass
+        .replace(/\bbg-(\S+)/g, 'text-bg-$1')
+        .replace(/\bmr-/g, 'me-');
     const toast = document.createElement('div');
-    toast.className = `toast ${toastClass.replace(/\bmr-/g, 'me-')}`;
+    toast.className = `toast border-0 ${normalizedClass}`;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
     toast.setAttribute('aria-atomic', 'true');
     toast.innerHTML = `
-        <div class="toast-header">
+        <div class="toast-header bg-transparent text-white">
             <strong class="me-auto">${title}</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body">${body}</div>
     `;

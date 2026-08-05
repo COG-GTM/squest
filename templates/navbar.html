@@ -2,7 +2,7 @@
 {% load maintenance %}
 {% is_maintenance_mode_enabled as as_maintenance_mode_enabled %}
 {% is_dev_server as is_dev_server_bool %}
-<header class="app-header navbar navbar-expand sticky-top {% if as_maintenance_mode_enabled  %}bg-danger{% elif is_dev_server_bool %}bg-warning{% else %}bg-body-tertiary{% endif %}">
+<header class="app-header navbar navbar-expand {% if as_maintenance_mode_enabled  %}bg-danger{% elif is_dev_server_bool %}bg-warning{% else %}bg-body-tertiary{% endif %}">
     <nav class="container-fluid">
     <!-- Left navbar links -->
     <ul class="navbar-nav">

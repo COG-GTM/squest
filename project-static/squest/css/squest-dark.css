@@ -11,11 +11,11 @@
     opacity: 0.4;
 }
 
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h1,
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h2,
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h3,
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h4,
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h5,
-[data-bs-theme="dark"] div.martor-preview.bg-dark > h6 {
+[data-bs-theme="dark"] div.martor-preview > h1,
+[data-bs-theme="dark"] div.martor-preview > h2,
+[data-bs-theme="dark"] div.martor-preview > h3,
+[data-bs-theme="dark"] div.martor-preview > h4,
+[data-bs-theme="dark"] div.martor-preview > h5,
+[data-bs-theme="dark"] div.martor-preview > h6 {
     color: white !important;
 }

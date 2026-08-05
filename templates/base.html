@@ -42,7 +42,7 @@
         {% endblock %}
     </title>
 </head>
-<body class="sidebar-mini layout-fixed{% if 'login' in request.path %} login-page{% endif %}">
+<body class="sidebar-mini layout-fixed fixed-header fixed-footer{% if 'login' in request.path %} login-page{% endif %}">
 <div class="app-wrapper">
     {% if 'login' not in request.path %}
         {% include 'navbar.html' %}
