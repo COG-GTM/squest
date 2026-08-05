@@ -243,7 +243,7 @@ def test_admin_creates_and_deletes_a_team_of_an_organization(admin_page, organiz
     team_url = admin_page.url
     admin_page.goto(organization_url)
     _open_tab(admin_page, "Teams")
-    expect_table_contains(admin_page, team)
+    expect(_tab_rows(admin_page, "teams", team)).to_have_count(1)
 
     admin_page.goto(team_url)
     _header_button(admin_page, "trash").click()
@@ -251,7 +251,7 @@ def test_admin_creates_and_deletes_a_team_of_an_organization(admin_page, organiz
 
     admin_page.goto(organization_url)
     expect(_card_title(admin_page)).to_contain_text(organization)
-    expect_table_does_not_contain(admin_page, team)
+    expect(_tab_rows(admin_page, "teams", team)).to_have_count(0)
 
 
 def test_admin_grants_and_removes_a_role_on_an_organization(admin_page, organization_factory):
@@ -260,15 +260,16 @@ def test_admin_grants_and_removes_a_role_on_an_organization(admin_page, organiza
     _grant_role(admin_page, url, SQUEST_USER_ROLE, "carol")
 
     _open_tab(admin_page, "Users")
-    expect(table_row(admin_page, "carol")).to_contain_text(SQUEST_USER_ROLE)
+    carol = _tab_rows(admin_page, "users", "carol")
+    expect(carol).to_contain_text(SQUEST_USER_ROLE)
 
     # the small cross of the role button removes that one role
-    table_row(admin_page, "carol").locator("a.btn-secondary[title='Delete']").first.click()
+    carol.locator("a.btn-secondary[title='Delete']").first.click()
     expect(admin_page.locator("body")).to_contain_text(SQUEST_USER_ROLE)
     submit_form(admin_page, "Confirm")
 
     expect(_card_title(admin_page)).to_contain_text(name)  # still the organization, not an error page
-    expect_table_does_not_contain(admin_page, "carol")
+    expect(_tab_rows(admin_page, "users", "carol")).to_have_count(0)
 
 
 def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_factory):
@@ -284,11 +285,11 @@ def test_admin_grants_and_removes_a_role_on_a_team(admin_page, organization_fact
     _grant_role(admin_page, team_url, SQUEST_USER_ROLE, "carol")
 
     _open_tab(admin_page, "Users")
-    expect(table_row(admin_page, "carol")).to_contain_text(SQUEST_USER_ROLE)
+    expect(_tab_rows(admin_page, "users", "carol")).to_contain_text(SQUEST_USER_ROLE)
 
     _revoke_user(admin_page, team_url, "carol")
     expect(_card_title(admin_page)).to_contain_text(team)
-    expect_table_does_not_contain(admin_page, "carol")
+    expect(_tab_rows(admin_page, "users", "carol")).to_have_count(0)
 
     _delete_from_its_page(admin_page, team_url)
 
