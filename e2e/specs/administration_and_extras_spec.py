@@ -17,7 +17,8 @@ from playwright.sync_api import Page, expect
 
 from e2e.aap_stub.fake_tower import AUTH_FAILURE_TOKEN
 from e2e.helpers import NAV_MAP, expect_message, expect_no_form_error, goto_sidebar_entry, \
-    expect_form_error, submit_form, table_row as helper_table_row, visible_sidebar_entries
+    expect_form_error, expect_table_does_not_contain, submit_form, table_row as helper_table_row, \
+    visible_sidebar_entries
 
 COMPLIANT_JOB_TEMPLATE = "Deploy virtual machine"
 NON_COMPLIANT_JOB_TEMPLATE = "Decommission virtual machine"
@@ -62,22 +63,22 @@ def _add_tower_server(page: Page, base_url: str) -> str:
     page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
     page.fill("input[name='token']", "a-token-the-stub-accepts")
     submit_form(page)
-    expect(table_row(page, name)).to_have_count(1)
+    expect(_table_row(page, name)).to_have_count(1)
     return name
 
 
 def _open_job_template_list(page: Page, tower_name: str) -> None:
     """Walks from the server list to the job template list through the count button of the row."""
-    table_row(page, tower_name).locator("a[id^='job_template_count_']").click()
+    _table_row(page, tower_name).locator("a[id^='job_template_count_']").click()
     page.wait_for_load_state()
 
 
 def _row_action(page: Page, row_text: str, title: str):
-    return table_row(page, row_text).locator(f"a[title='{title}']")
+    return _table_row(page, row_text).locator(f"a[title='{title}']")
 
 
-def table_row(page: Page, text: str):
-    """Returns a matching row, advancing through server-side pagination when needed."""
+def _table_row(page: Page, text: str):
+    """Walks pagination because E2E_REUSE_DB accumulates rows across runs."""
     row = helper_table_row(page, text)
     for _ in range(20):
         if row.count():
@@ -111,7 +112,7 @@ def test_operator_reaches_the_job_template_detail_of_their_own_server(admin_page
     expect(job_template_table).to_contain_text(COMPLIANT_JOB_TEMPLATE)
     expect(job_template_table).to_contain_text(NON_COMPLIANT_JOB_TEMPLATE)
 
-    table_row(admin_page, COMPLIANT_JOB_TEMPLATE).get_by_role("link", name=COMPLIANT_JOB_TEMPLATE).click()
+    _table_row(admin_page, COMPLIANT_JOB_TEMPLATE).get_by_role("link", name=COMPLIANT_JOB_TEMPLATE).click()
     details = admin_page.locator("section", has_text="Details").first
     expect(details).to_contain_text(COMPLIANT_JOB_TEMPLATE)
     expect(details).to_contain_text(tower_name)
@@ -123,7 +124,7 @@ def test_compliancy_page_reports_a_compliant_job_template_as_a_success(admin_pag
     tower_name = _add_tower_server(admin_page, base_url)
     _open_job_template_list(admin_page, tower_name)
 
-    row = table_row(admin_page, COMPLIANT_JOB_TEMPLATE)
+    row = _table_row(admin_page, COMPLIANT_JOB_TEMPLATE)
     expect(row.locator("svg.fa-check")).to_have_count(1)
     row.locator("svg[id^='icon_']").click()
     admin_page.wait_for_load_state()
@@ -137,7 +138,7 @@ def test_compliancy_page_warns_about_prompt_on_launch_for_a_non_compliant_job_te
     tower_name = _add_tower_server(admin_page, base_url)
     _open_job_template_list(admin_page, tower_name)
 
-    row = table_row(admin_page, NON_COMPLIANT_JOB_TEMPLATE)
+    row = _table_row(admin_page, NON_COMPLIANT_JOB_TEMPLATE)
     expect(row.locator("svg.fa-times")).to_have_count(1)
     row.locator("svg[id^='icon_']").click()
     admin_page.wait_for_load_state()
@@ -157,8 +158,8 @@ def test_operator_renames_an_aap_server(admin_page, base_url):
     submit_form(admin_page)
 
     expect_no_form_error(admin_page)
-    expect(table_row(admin_page, renamed)).to_have_count(1)
-    expect(admin_page.locator("#tower_server_table")).not_to_contain_text(tower_name)
+    expect(_table_row(admin_page, renamed)).to_have_count(1)
+    expect_table_does_not_contain(admin_page, tower_name)
 
 
 def test_operator_updates_the_token_of_an_aap_server(admin_page, base_url):
@@ -174,22 +175,22 @@ def test_operator_updates_the_token_of_an_aap_server(admin_page, base_url):
 
     expect_no_form_error(admin_page)
     expect(admin_page).to_have_url(re.compile(r"/tower/$"))
-    expect(table_row(admin_page, tower_name)).to_have_count(1)
+    expect(_table_row(admin_page, tower_name)).to_have_count(1)
 
 
 def test_operator_is_told_when_the_aap_token_is_refused(admin_page, base_url):
     name = _unique("Rejected AAP")
-    page = admin_page
-    page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
-    page.get_by_role("link", name="Add").click()
-    page.fill("input[name='name']", name)
-    page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
-    page.fill("input[name='token']", AUTH_FAILURE_TOKEN)
-    submit_form(page)
+    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    admin_page.get_by_role("link", name="Add").click()
+    admin_page.fill("input[name='name']", name)
+    admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
+    admin_page.fill("input[name='token']", AUTH_FAILURE_TOKEN)
+    submit_form(admin_page)
 
-    expect_form_error(page, "Fail to authenticate with provided token")
-    page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
-    expect(page.locator("body")).not_to_contain_text(name)
+    expect_form_error(admin_page, "Fail to authenticate with provided token")
+    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    expect_table_does_not_contain(admin_page, name)
 
 
 def test_operator_deletes_an_aap_server(admin_page, base_url):
@@ -197,7 +198,8 @@ def test_operator_deletes_an_aap_server(admin_page, base_url):
 
     _delete_row(admin_page, tower_name)
 
-    expect(admin_page.locator("#tower_server_table")).not_to_contain_text(tower_name)
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    expect_table_does_not_contain(admin_page, tower_name)
 
 
 def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, base_url, scoped_user_page):
@@ -205,7 +207,7 @@ def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, base
     message = f"The platform is read only during {title}"
     _create_announcement(admin_page, base_url, title, message)
 
-    expect(table_row(admin_page, title)).to_have_count(1)
+    expect(_table_row(admin_page, title)).to_have_count(1)
 
     scoped_user_page.locator("aside.main-sidebar a.brand-link").click()
     scoped_user_page.wait_for_load_state()
@@ -223,20 +225,21 @@ def test_announcement_can_be_edited_and_deleted(admin_page, base_url):
     admin_page.fill("input[name='title']", edited)
     submit_form(admin_page)
     expect_no_form_error(admin_page)
-    expect(table_row(admin_page, edited)).to_have_count(1)
+    expect(_table_row(admin_page, edited)).to_have_count(1)
 
     _row_action(admin_page, edited, "Delete").click()
-    # Squest sets this warning sentence but leaves details_list empty, so the generic confirmation
-    # template does not render it; assert the confirmation text until that application bug is fixed.
+    # AnnouncementDeleteView sets this warning but generics/confirm-delete-template.html suppresses it
+    # because details_list is empty; assert the confirmation text until that application bug is fixed.
     expect(admin_page.locator("body")).to_contain_text("Confirm deletion of")
     submit_form(admin_page, "Confirm")
-    expect(admin_page.locator("#announcement_table")).not_to_contain_text(edited)
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    expect_table_does_not_contain(admin_page, edited)
 
 
 def _create_announcement(page: Page, base_url: str, title: str, message: str) -> None:
     """Creates an announcement that is live right now, so a user sees it on the home page."""
     now = datetime.now()
-    goto_sidebar_entry_of(page, base_url, "Announcements")
+    _goto_sidebar_entry_of(page, base_url, "Announcements")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='title']", title)
     page.fill("textarea[name='message']", message)
@@ -247,7 +250,7 @@ def _create_announcement(page: Page, base_url: str, title: str, message: str) ->
     expect_no_form_error(page)
 
 
-def goto_sidebar_entry_of(page: Page, base_url: str, entry: str) -> None:
+def _goto_sidebar_entry_of(page: Page, base_url: str, entry: str) -> None:
     """Navigates through the sidebar, from the home page so that every group is rendered."""
     page.goto(f"{base_url}/ui/")
     goto_sidebar_entry(page, entry)
@@ -257,7 +260,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     """A custom link is configured by an operator and consumed by a user on their own instance."""
     name = _unique("Runbook")
     text = _unique("Open runbook")
-    goto_sidebar_entry_of(admin_page, base_url, "Custom links")
+    _goto_sidebar_entry_of(admin_page, base_url, "Custom links")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option(admin_page, "services", "Virtual machine")
@@ -266,15 +269,17 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     submit_form(admin_page)
 
     expect_no_form_error(admin_page)
-    expect(table_row(admin_page, name)).to_have_count(1)
+    expect(_table_row(admin_page, name)).to_have_count(1)
 
-    goto_sidebar_entry_of(scoped_user_page, base_url, "Instances")
-    table_row(scoped_user_page, "batch-worker-01").get_by_role("link", name="batch-worker-01").click()
+    _goto_sidebar_entry_of(scoped_user_page, base_url, "Instances")
+    _table_row(scoped_user_page, "batch-worker-01").get_by_role("link", name="batch-worker-01").click()
     scoped_user_page.wait_for_load_state()
     expect(scoped_user_page.locator(".btn-toolbar")).to_contain_text(text)
 
-    goto_sidebar_entry_of(admin_page, base_url, "Custom links")
+    _goto_sidebar_entry_of(admin_page, base_url, "Custom links")
     _delete_row(admin_page, name)
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    # The list is genuinely empty after deletion, so Squest does not render custom_link_table.
     expect(admin_page.locator("body")).not_to_contain_text(name)
 
     scoped_user_page.reload()
@@ -284,7 +289,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
 def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
     """Only the configuration surface: firing a hook needs a celery worker, which the suite has not."""
     name = _unique("On accepted")
-    goto_sidebar_entry_of(admin_page, base_url, "Request hook")
+    _goto_sidebar_entry_of(admin_page, base_url, "Request hook")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option_containing(admin_page, "operations", "Create virtual machine")
@@ -294,7 +299,7 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url)
     submit_form(admin_page)
 
     expect_no_form_error(admin_page)
-    row = table_row(admin_page, name)
+    row = _table_row(admin_page, name)
     expect(row).to_have_count(1)
     expect(row).to_contain_text("ACCEPTED")
     expect(row).to_contain_text(job_template_label)
@@ -303,15 +308,17 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url)
     _select_option(admin_page, "state", "FAILED")
     submit_form(admin_page)
     expect_no_form_error(admin_page)
-    expect(table_row(admin_page, name)).to_contain_text("FAILED")
+    expect(_table_row(admin_page, name)).to_contain_text("FAILED")
 
     _delete_row(admin_page, name)
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    # The list is genuinely empty after deletion, so Squest does not render global_hook_table.
     expect(admin_page.locator("body")).not_to_contain_text(name)
 
 
 def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
     name = _unique("On available")
-    goto_sidebar_entry_of(admin_page, base_url, "Instance hook")
+    _goto_sidebar_entry_of(admin_page, base_url, "Instance hook")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     _select_option(admin_page, "services", "Virtual machine")
@@ -320,7 +327,7 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url
     submit_form(admin_page)
 
     expect_no_form_error(admin_page)
-    row = table_row(admin_page, name)
+    row = _table_row(admin_page, name)
     expect(row).to_have_count(1)
     expect(row).to_contain_text("AVAILABLE")
     expect(row).to_contain_text("Virtual machine")
@@ -332,21 +339,23 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url
     _select_option(admin_page, "state", "DELETED")
     submit_form(admin_page)
     expect_no_form_error(admin_page)
-    expect(table_row(admin_page, renamed)).to_contain_text("DELETED")
+    expect(_table_row(admin_page, renamed)).to_contain_text("DELETED")
 
     _delete_row(admin_page, renamed)
+    expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
+    # The list is genuinely empty after deletion, so Squest does not render global_hook_table.
     expect(admin_page.locator("body")).not_to_contain_text(renamed)
 
 
 def _create_email_template(page: Page, base_url: str, name: str, title: str, content: str) -> None:
-    goto_sidebar_entry_of(page, base_url, "Emails")
+    _goto_sidebar_entry_of(page, base_url, "Emails")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='name']", name)
     page.fill("input[name='email_title']", title)
     page.fill("textarea[name='html_content']", content)
     submit_form(page)
     expect_no_form_error(page)
-    goto_sidebar_entry_of(page, base_url, "Emails")
+    _goto_sidebar_entry_of(page, base_url, "Emails")
 
 
 def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
@@ -354,8 +363,8 @@ def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
     title = _unique("Your quota is almost full")
     _create_email_template(admin_page, base_url, name, title, "<p>Please clean up your instances</p>")
 
-    expect(table_row(admin_page, name)).to_have_count(1)
-    table_row(admin_page, name).get_by_role("link", name=name).click()
+    expect(_table_row(admin_page, name)).to_have_count(1)
+    _table_row(admin_page, name).get_by_role("link", name=name).click()
     admin_page.wait_for_load_state()
     expect(admin_page.locator("body")).to_contain_text(title)
     # the preview renders the html content of the template, not its source
@@ -374,13 +383,13 @@ def test_admin_sends_an_email_from_a_template(admin_page, base_url):
     name = _unique("Welcome")
     _create_email_template(admin_page, base_url, name, _unique("Welcome to Squest"), "<p>Hello</p>")
 
-    table_row(admin_page, name).get_by_role("link", name=name).click()
+    _table_row(admin_page, name).get_by_role("link", name=name).click()
     admin_page.get_by_role("link", name="Send email").click()
     _select_option(admin_page, "users", "bob")
     submit_form(admin_page, "Send email")
 
     expect_message(admin_page, "Email sent")
-    expect(table_row(admin_page, name)).to_have_count(1)
+    expect(_table_row(admin_page, name)).to_have_count(1)
 
 
 def test_scoped_user_does_not_see_the_administration_group(scoped_user_page):
