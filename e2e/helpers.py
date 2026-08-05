@@ -91,15 +91,29 @@ def sidebar_entry(page: Page, name: str):
     return entry
 
 
+def reachable_sidebar_entry(page: Page, name: str):
+    """``sidebar_entry``, for a caller that needs the entry to be there.
+
+    Without this, an entry the signed in user cannot see (or one the sidebar renamed) reaches
+    Playwright as an empty locator and fails on a generic timeout that names a CSS selector rather
+    than the entry, which is a long way from 'bob is not allowed to see Role'.
+    """
+    entry = sidebar_entry(page, name)
+    if entry.count() == 0:
+        raise AssertionError(f"the sidebar has no '{name}' entry for this user. Visible entries: "
+                            f"{visible_sidebar_entries(page)}")
+    return entry
+
+
 def sidebar_href(page: Page, name: str) -> str:
     """The path the sidebar itself points a nav map entry at, used to catch NAV_MAP drift."""
-    return sidebar_entry(page, name).first.get_attribute("href")
+    return reachable_sidebar_entry(page, name).first.get_attribute("href")
 
 
 def goto_sidebar_entry(page: Page, name: str) -> None:
     """Navigates the way a user does: through the sidebar, not through a URL."""
     with page.expect_navigation():
-        sidebar_entry(page, name).first.click()
+        reachable_sidebar_entry(page, name).first.click()
 
 
 def visible_sidebar_entries(page: Page) -> list[str]:
