@@ -128,8 +128,11 @@ def test_admin_can_submit_and_inspect_a_fresh_request(admin_page):
     expect(_detail_row(admin_page, "User")).to_contain_text("admin")
     expect(_detail_row(admin_page, "Instance")).to_contain_text(instance)
     expect(admin_page.locator("body")).to_contain_text("vcpu")
+    expect(admin_page.locator("body")).to_contain_text("2")
     expect(admin_page.locator("body")).to_contain_text("memory")
+    expect(admin_page.locator("body")).to_contain_text("4")
     expect(admin_page.locator("body")).to_contain_text("environment")
+    expect(admin_page.locator("body")).to_contain_text("dev")
     expect(admin_page.get_by_text("Comments", exact=True).first).to_be_visible()
 
 
@@ -258,7 +261,7 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
     try:
         admin_page.goto(request_link)
         instance_name = _detail_row(admin_page, "Instance").get_by_role("link").inner_text()
-        archive = admin_page.get_by_title("Archive")
+        archive = admin_page.get_by_title("Archive", exact=True)
         expect(archive).to_be_visible()
         archive.click()
         archived = True
@@ -399,7 +402,7 @@ def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
         alice.goto(detail)
         expect(alice.get_by_role("link", name="Review")).to_be_visible()
         alice.get_by_role("link", name="Review").click()
-        alice.locator("form button[type='submit']").first.click()
+        submit_form(alice)
         _request_state(alice, "ACCEPTED")
     finally:
         _delete_approval_entities(admin_page, workflow_name, role_name)
@@ -437,11 +440,11 @@ def test_approval_workflow_two_steps(admin_page, scoped_user_page, login_as):
         expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_be_visible()
         expect(alice.get_by_role("link", name="Review")).to_have_count(1)
         alice.get_by_role("link", name="Review").click()
-        alice.locator("form button[type='submit']").first.click()
+        submit_form(alice)
         expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_have_count(0)
         expect(alice.get_by_role("link", name="Review")).to_be_visible()
         alice.get_by_role("link", name="Review").click()
-        alice.locator("form button[type='submit']").first.click()
+        submit_form(alice)
         _request_state(alice, "ACCEPTED")
     finally:
         _delete_approval_entities(admin_page, workflow_name, role_name)
