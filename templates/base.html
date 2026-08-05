@@ -59,8 +59,8 @@
         {% endblock %}
     </title>
 </head>
-<body class="{% if 'login' in request.path %}login-page{% else %}sidebar-mini sidebar-expand-lg layout-fixed fixed-header fixed-footer{% endif %}">
-{% if 'login' not in request.path %}<div class="app-wrapper">{% endif %}
+<body class="sidebar-mini sidebar-expand-lg layout-fixed fixed-header fixed-footer{% if 'login' in request.path %} login-page{% endif %}">
+<div class="app-wrapper">
     {% if 'login' not in request.path %}
         {% include 'navbar.html' %}
         {% include 'sidebar.html' %}
@@ -143,7 +143,7 @@
         </footer>
     {% endif %}
 
-{% if 'login' not in request.path %}</div> <!-- end app-wrapper-->{% endif %}
+</div> <!-- end app-wrapper-->
 <!-- Bootstrap JS -->
 <script src="{% static 'bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
 <!-- datatable -->
