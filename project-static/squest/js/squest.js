@@ -47,6 +47,10 @@ $(document).ready(function () {
         });
     });
 
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+        new bootstrap.Tooltip(element);
+    });
+
     $('.ajax_sync_all_job_template').click(sync_all_job_template);
     $('.ajax_sync_job_template').click(sync_job_template);
 

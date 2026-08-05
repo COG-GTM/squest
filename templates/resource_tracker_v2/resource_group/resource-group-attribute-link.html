@@ -54,10 +54,7 @@
     {% load static %}
     <script src="{% static 'squest/js/resource_group_attributes.js' %}"></script>
     <script>
-        $("#id_consume_from_attribute_definition").empty();
-        let selectElement = document.getElementById('id_consume_from_attribute_definition');
-        let myNewOption = new Option("---------", "");
-        selectElement.options[0] = myNewOption;
+        load_resource_group_attributes();
         // on resource group change we update the list of attribute
         $("#id_consume_from_resource_group").change(function () {
             load_resource_group_attributes($(this).val(), );

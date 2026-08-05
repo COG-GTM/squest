@@ -27,7 +27,7 @@ class SquestModelForm(ModelForm):
             elif isinstance(current_field.widget, FileInput):
                 current_field.widget.attrs['class'] = ""
             elif isinstance(current_field.widget, DateTimeInput):
-                current_field.widget = NativeDateTimeInput()
+                current_field.widget = NativeDateTimeInput(attrs=current_field.widget.attrs)
             elif isinstance(current_field, JSONField):
                 current_field.widget.attrs['class'] = 'form-control json'
                 # current_field.widget.attrs['onblur'] = 'reformatJSON(this)'

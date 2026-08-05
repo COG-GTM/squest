@@ -1,4 +1,13 @@
+function reset_resource_group_attributes() {
+    const select = $("#id_consume_from_attribute_definition");
+    select.empty().append(new Option("---------", "")).selectpicker('refresh');
+}
+
 function load_resource_group_attributes(target_resource_group_id){
+    reset_resource_group_attributes();
+    if (!target_resource_group_id) {
+        return;
+    }
     var url = $("#ResourceGroupLinkForm").attr("data-attribute-url");
     var current_resource_group_id = $("#ResourceGroupLinkForm").attr("current-resource-group-id");
     $.ajax({

@@ -35,6 +35,6 @@ class SquestForm(Form):
             elif isinstance(current_field.widget, FileInput):
                 current_field.widget.attrs['class'] = ""
             elif isinstance(current_field.widget, DateTimeInput):
-                current_field.widget = NativeDateTimeInput()
+                current_field.widget = NativeDateTimeInput(attrs=current_field.widget.attrs)
             else:
                 current_field.widget.attrs['class'] = 'form-control'

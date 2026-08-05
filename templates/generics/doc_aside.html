@@ -2,9 +2,8 @@
 
 {% if can_view_doc %}
     {% load martortags %}
-    {% for doc in docs %}
-
-        <div id="accordion_docs">
+    <div id="accordion_docs">
+        {% for doc in docs %}
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -25,7 +24,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-    {% endfor %}
+        {% endfor %}
+    </div>
 {% endif %}

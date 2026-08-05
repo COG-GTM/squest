@@ -2,6 +2,8 @@ from service_catalog.models import ApprovalState
 from service_catalog.models.instance import InstanceState
 from service_catalog.models.request import RequestState
 
+# State colors are used by both `text-*` and `text-bg-*`; keep every value
+# legible in both contexts, including the custom orange defined in squest.css.
 map_dict_request_state = {
     RequestState.ACCEPTED: "primary",
     RequestState.ON_HOLD: "warning",
@@ -11,7 +13,7 @@ map_dict_request_state = {
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",
-    RequestState.ARCHIVED: "light"
+    RequestState.ARCHIVED: "warning"
 }
 
 map_dict_instance_state = {
