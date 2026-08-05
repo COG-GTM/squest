@@ -193,6 +193,8 @@ def test_admin_edits_an_attribute_definition(admin_page):
 
     _goto_named_list_row(admin_page, "Attributes", renamed)
     expect(table_row(admin_page, renamed)).to_contain_text("Second description")
+
+    _goto_named_list_row(admin_page, "Attributes", name, expect_one=False)
     expect_table_does_not_contain(admin_page, name)
 
 
@@ -258,12 +260,12 @@ def test_admin_creates_a_resource_and_edits_its_attribute_values(admin_page):
     _create_resource(admin_page, group, resource, {SEEDED_ATTRIBUTE: 8, "Storage": 512})
     values = _resource_values(admin_page, resource)
     assert _resource_attribute_value(values, SEEDED_ATTRIBUTE) == "8"
-    assert values["Storage"] == "512"
+    assert _resource_attribute_value(values, "Storage") == "512"
 
     _edit_resource(admin_page, group, resource, {"Storage": 1024})
     values = _resource_values(admin_page, resource)
     assert _resource_attribute_value(values, SEEDED_ATTRIBUTE) == "8"
-    assert values["Storage"] == "1024"
+    assert _resource_attribute_value(values, "Storage") == "1024"
 
 
 def test_admin_moves_a_resource_to_another_resource_group(admin_page):
