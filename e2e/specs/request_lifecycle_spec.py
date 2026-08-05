@@ -49,6 +49,12 @@ def _detail_row(page, label):
     )
 
 
+def _survey_row(page, variable):
+    return page.locator("table tr").filter(
+        has=page.locator("b").filter(has_text=re.compile(f"^{re.escape(variable)}$"))
+    )
+
+
 def _submit_request(page, service_name, instance_name, scope_label):
     goto_sidebar_entry(page, "Service catalog")
     service_card = page.locator(".card").filter(has_text=service_name).first
@@ -59,14 +65,15 @@ def _submit_request(page, service_name, instance_name, scope_label):
     service_card.get_by_role("link", name="Order").click()
     page.get_by_label(re.compile("Instance name")).fill(instance_name)
     page.get_by_label(re.compile("Quota scope")).select_option(label=scope_label)
-    page.get_by_role("button", name="Next").click()
+    with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
+        page.get_by_role("button", name="Next").click()
     for field, value in (("vcpu", "2"), ("memory", "4"), ("environment", "dev")):
-        control = page.locator(f"[name='{field}']")
-        if control.count():
-            if control.first.evaluate("(el) => el.tagName") == "SELECT":
-                control.first.select_option(label=value)
-            else:
-                control.first.fill(value)
+        control = page.locator(f"[name$='-{field}']")
+        expect(control).to_have_count(1)
+        if control.first.evaluate("(el) => el.tagName") == "SELECT":
+            control.first.select_option(label=value)
+        else:
+            control.first.fill(value)
     comment = page.get_by_label("Comment")
     if comment.count():
         comment.first.fill(f"Created by e2e {_unique('comment')}")
@@ -127,12 +134,9 @@ def test_admin_can_submit_and_inspect_a_fresh_request(admin_page):
     _request_state(admin_page, "SUBMITTED")
     expect(_detail_row(admin_page, "User")).to_contain_text("admin")
     expect(_detail_row(admin_page, "Instance")).to_contain_text(instance)
-    expect(admin_page.locator("body")).to_contain_text("vcpu")
-    expect(admin_page.locator("body")).to_contain_text("2")
-    expect(admin_page.locator("body")).to_contain_text("memory")
-    expect(admin_page.locator("body")).to_contain_text("4")
-    expect(admin_page.locator("body")).to_contain_text("environment")
-    expect(admin_page.locator("body")).to_contain_text("dev")
+    expect(_survey_row(admin_page, "vcpu")).to_contain_text("2")
+    expect(_survey_row(admin_page, "memory")).to_contain_text("4")
+    expect(_survey_row(admin_page, "environment")).to_contain_text("dev")
     expect(admin_page.get_by_text("Comments", exact=True).first).to_be_visible()
 
 
