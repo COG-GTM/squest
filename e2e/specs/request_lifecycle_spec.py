@@ -1,4 +1,5 @@
 import re
+import warnings
 from uuid import uuid4
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
@@ -189,6 +190,7 @@ def test_requester_can_cancel_own_request(admin_page, scoped_user_page):
         cancel.click()
         scoped_user_page.get_by_role("button", name="Confirm").click()
     else:
+        warnings.warn("bob's Cancel action was not rendered; fell back to admin cancel")
         admin_page.goto(detail_href)
         admin_page.get_by_title("Cancel").click()
         admin_page.get_by_role("button", name="Confirm").click()
@@ -239,24 +241,36 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
     expect(row).to_have_count(1)
     request_link = row.locator("a[href*='/request/']").first.get_attribute("href")
     assert request_link
-    admin_page.goto(request_link)
-    archive = admin_page.get_by_title("Archive")
-    expect(archive).to_be_visible()
-    archive.click()
-    _request_state(admin_page, "ARCHIVED")
-    goto_sidebar_entry(admin_page, "Requests")
-    expect(admin_page.locator(f"table a[href='{request_link}']")).to_have_count(0)
-    admin_page.get_by_role("link", name=re.compile("Archived")).click()
-    archived_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
-    expect(archived_row).to_have_count(1)
-    archived_href = archived_row.locator("a[href*='/request/']").first.get_attribute("href")
-    assert archived_href
-    admin_page.goto(archived_href)
-    admin_page.get_by_title("Unarchive").click()
-    _request_state(admin_page, "COMPLETE")
-    goto_sidebar_entry(admin_page, "Requests")
-    restored_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
-    expect(restored_row).to_have_count(1)
+    archived = False
+    try:
+        admin_page.goto(request_link)
+        archive = admin_page.get_by_title("Archive")
+        expect(archive).to_be_visible()
+        archive.click()
+        archived = True
+        _request_state(admin_page, "ARCHIVED")
+        goto_sidebar_entry(admin_page, "Requests")
+        expect(admin_page.locator(f"table a[href='{request_link}']")).to_have_count(0)
+        admin_page.get_by_role("link", name=re.compile("Archived")).click()
+        archived_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
+        expect(archived_row).to_have_count(1)
+        archived_href = archived_row.locator("a[href*='/request/']").first.get_attribute("href")
+        assert archived_href
+        admin_page.goto(archived_href)
+        admin_page.get_by_title("Unarchive").click()
+        archived = False
+        _request_state(admin_page, "COMPLETE")
+        goto_sidebar_entry(admin_page, "Requests")
+        restored_row = admin_page.locator(f"table a[href='{request_link}']").locator("xpath=ancestor::tr")
+        expect(restored_row).to_have_count(1)
+    finally:
+        if archived:
+            try:
+                admin_page.goto(request_link)
+                if admin_page.get_by_title("Unarchive").count():
+                    admin_page.get_by_title("Unarchive").click()
+            except Exception:
+                pass
 
 
 def test_scoped_user_cannot_see_marketing_request(admin_page, scoped_user_page):
