@@ -42,12 +42,9 @@
                         <form action="{% url 'service_catalog:requestmessage_create' target_request.id %}" method="post" _lpchecked="1">{% csrf_token %}
                             {{  form.as_p }}
                             <div class="mb-3">
-                                <div class="col-sm-offset-2 col-sm-10">
-                                    <!-- validate button -->
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="fas fa-comment"></i> Send
-                                    </button>
-                                </div>
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-comment"></i> Send
+                                </button>
                             </div>
 
                         </form>

@@ -74,13 +74,11 @@
                                 {% endif %}
 
                                 <div class="mt-2 mb-3">
-                                    <div class="col-sm-offset-2 col-sm-10">
                                         {% if wizard.steps.prev %}
                                             {# <button name="wizard_goto_step" type="submit" value="{{ wizard.steps.first }}">{% translate "first step" %}</button>#}
                                             <button formnovalidate="formnovalidate" class="btn btn-secondary" name="wizard_goto_step" type="submit" value="{{ wizard.steps.prev }}">Previous step</button>
                                         {% endif %}
                                         <input type="submit" class="btn btn-primary" value="{% if wizard.steps.step1 == wizard.steps.count %}Submit{% else %}Next{% endif %}"/>
-                                    </div>
                                 </div>
                             </form>
                             <p>Step {{ wizard.steps.step1 }} of {{ wizard.steps.count }}</p>

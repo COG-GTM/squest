@@ -11,7 +11,7 @@ map_dict_request_state = {
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",
-    RequestState.ARCHIVED: "secondary"
+    RequestState.ARCHIVED: "light"
 }
 
 map_dict_instance_state = {
@@ -25,7 +25,7 @@ map_dict_instance_state = {
     InstanceState.UPDATE_FAILED: "warning",
     InstanceState.DELETED: "danger",
     InstanceState.ARCHIVED: "dark",
-    InstanceState.ABORTED: "secondary",
+    InstanceState.ABORTED: "info",
 }
 
 map_dict_step_state = {
