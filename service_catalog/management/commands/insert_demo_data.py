@@ -150,7 +150,7 @@ class Command(BaseCommand):
                 defaults={"job_template": job_template, "process_timeout_second": 30},
             )
             update_operation.update_survey()
-            service.refresh_from_db()  # creating the CREATE operation already enables the service
+            service.refresh_from_db()  # the operation signals may have written enabled on the DB row
             if not service.enabled:
                 service.enabled = True
                 service.save()
