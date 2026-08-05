@@ -138,16 +138,18 @@ def _grant_role(page, scope_url, role, username, button="Add roles/users"):
 def _revoke_user(page, scope_url, username):
     """Removes every role ``username`` holds on the scope, through the trash of its users tab."""
     page.goto(scope_url)
-    # the global scope page renders its users table directly, an org/team page behind a tab that
-    # only exists once the scope holds a user
-    if page.locator("#tabs").get_by_role("link", name="Users", exact=True).count() == 1:
+    # an org/team page keeps its users behind a tab, next to panes that are in the DOM as well; the
+    # global scope page has no tabs at all and renders its users table directly
+    if page.locator("#tabs").count() == 1:
         _open_tab(page, "Users")
-        row = _tab_rows(page, "users", username)  # every other pane is in the DOM too
+        row = _tab_rows(page, "users", username)
     else:
         row = table_row(page, username)
-    page.locator("table tbody").first.wait_for(state="attached")
-    if row.count() == 0:
-        return
+    try:
+        # waited for rather than counted: a snapshot cannot tell "revoked" from "not rendered yet"
+        row.first.wait_for(state="attached", timeout=5000)
+    except PlaywrightTimeoutError:
+        return  # the scope does not hold the user, which is what the caller wants
     row.locator("a.btn-danger").first.click()
     page.wait_for_load_state()
     submit_form(page, "Confirm")
