@@ -65,12 +65,15 @@ REDACTED = "***redacted by the e2e harness***"
 expect.set_options(timeout=DEFAULT_EXPECT_TIMEOUT_MS)
 
 
-@pytest.hookimpl(hookwrapper=True)
+@pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item):
     """Keeps the browser on the asserted page for ``E2E_PAUSE_MS`` before the fixtures tear it down."""
-    yield
-    if E2E_PAUSE_MS:
-        time.sleep(E2E_PAUSE_MS / 1000)
+    try:
+        return (yield)
+    finally:
+        # in a finally because a failing test is the one whose last frames are worth watching
+        if E2E_PAUSE_MS:
+            time.sleep(E2E_PAUSE_MS / 1000)
 
 
 @pytest.fixture(scope="session")
