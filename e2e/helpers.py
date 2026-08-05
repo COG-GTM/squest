@@ -3,6 +3,8 @@
 Everything here is about Squest's shell (AdminLTE sidebar, django-tables2 lists, the generic
 form/confirm templates), so a spec only has to describe the flow it covers.
 """
+from urllib.parse import urlencode
+
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
 
 SUBMIT_NAVIGATION_TIMEOUT_MS = 15_000
@@ -151,6 +153,19 @@ def expect_form_error(page: Page, text: str) -> None:
     expect(page.locator(FORM_ERRORS)).to_contain_text(text)
 
 
+def goto_filtered_list(page: Page, base_url: str, path: str, **filters) -> None:
+    """Opens a list narrowed by its own filter form, e.g. ``goto_filtered_list(..., name=name)``.
+
+    ``SquestListView`` paginates at ten rows, so an assertion on an unfiltered list is really an
+    assertion about the first page: a row a test just created can sit on page two, and a row that
+    should not exist at all can hide there. Filtering by the unique value the test used makes both
+    directions independent of how many rows the database already holds, which is what a re-run
+    against a kept database (``E2E_REUSE_DB``) needs.
+    """
+    # the filters are icontains in the UI, which is what makes a unique name enough to isolate a row
+    page.goto(f"{base_url}{path}?{urlencode(filters)}")
+
+
 def table_rows(page: Page):
     return page.locator("table.table tbody tr")
 
@@ -162,6 +177,16 @@ def table_row(page: Page, text: str):
 
 def expect_table_contains(page: Page, text: str) -> None:
     expect(table_row(page, text)).to_have_count(1)
+
+
+def expect_empty_list(page: Page) -> None:
+    """The list rendered its own empty state, rather than a table without the row a test looked for.
+
+    Squest replaces the whole table with a 'No data' panel when a list (or a filtered list) comes back
+    empty, so this is the positive half of a 'the row does not exist' assertion: it fails on a page
+    that did not render at all, which a row count of zero would not.
+    """
+    expect(page.locator("h4", has_text="No data")).to_be_visible()
 
 
 def expect_table_does_not_contain(page: Page, text: str) -> None:

@@ -12,7 +12,8 @@ from playwright.sync_api import expect
 
 from e2e.aap_stub.fake_tower import AUTH_FAILURE_TOKEN
 from e2e.helpers import NAV_MAP, expect_form_error, expect_table_contains, expect_table_does_not_contain, \
-    goto_sidebar_entry, logout, sidebar_href, submit_form, table_row, visible_sidebar_entries
+    expect_empty_list, goto_filtered_list, goto_sidebar_entry, logout, sidebar_href, submit_form, table_row, \
+    visible_sidebar_entries
 
 ADMIN_ONLY_ENTRIES = ["RHAAP/AWX", "Approval workflows", "Role", "Permission", "Users"]
 NAV_MAP_ENTRIES = [(group, name, path) for group, entries in NAV_MAP.items() for name, path in entries.items()]
@@ -125,6 +126,9 @@ def test_adding_an_aap_server_syncs_its_job_templates(admin_page, base_url):
     admin_page.fill("input[name='token']", "a-token-the-stub-accepts")
     submit_form(admin_page)
 
+    # through the filter, not the list the form redirected to: the list paginates at ten rows, and a
+    # run against a kept database leaves one more server behind every time
+    goto_filtered_list(admin_page, base_url, NAV_MAP["Administration"]["RHAAP/AWX"], name=name)
     expect(table_row(admin_page, name)).to_have_count(1)
     table_row(admin_page, name).get_by_role("link").first.click()
     admin_page.get_by_role("link", name="Job templates").click()
@@ -144,8 +148,11 @@ def test_an_aap_server_whose_token_is_refused_is_not_created(admin_page, base_ur
     submit_form(admin_page)
 
     expect_form_error(admin_page, "Fail to authenticate with provided token")
-    # the error alone would also be satisfied by a form that saves the server and then complains
-    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    # the error alone would also be satisfied by a form that saves the server and then complains, and
+    # an unfiltered list would only prove the row is not on its first page
+    goto_filtered_list(admin_page, base_url, NAV_MAP["Administration"]["RHAAP/AWX"], name=name)
+    # the list did render, so the empty result is the filter finding nothing rather than a broken page
+    expect_empty_list(admin_page)
     expect_table_does_not_contain(admin_page, name)
 
 
