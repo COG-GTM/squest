@@ -23,7 +23,7 @@
 {% endcache %}
 
 <!-- Main Sidebar Container -->
-<aside class="app-sidebar shadow" {% if request.user.profile.theme == "dark" %}data-bs-theme="dark"{% endif %}>
+<aside class="app-sidebar bg-body-secondary shadow" {% if request.user.profile.theme == "dark" %}data-bs-theme="dark"{% endif %}>
     <!-- Brand Logo -->
     <div class="sidebar-brand">
         <a href="{% url 'home' %}" class="brand-link">
