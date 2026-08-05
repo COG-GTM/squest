@@ -3,9 +3,9 @@
  {{ operation.name }} | Operation
 {%  endblock %}
 {% block content %}
-    <div class="content-wrapper" style="min-height: 278px;">
+    <main class="app-main" style="min-height: 278px;">
         <!-- Content Header (Page header) -->
-        <div class="content-header">
+        <div class="app-content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
@@ -16,18 +16,18 @@
         </div>
         <!-- /.content-header -->
         <!-- Main content -->
-        <div class="content">
+        <div class="app-content">
             <div class="container-fluid">
                 <div class="card">
                     <div class="card-body">
                         <form action='{% url 'service_catalog:operation_delete' service_id=service.id pk=operation.id %}' method='POST'>{% csrf_token %}
                             <p>Do you want to delete the service operation "{{ operation.name }}"?</p>
                             <button type="submit" class="btn btn-danger">Delete</button>
-                            <a class="btn btn-default" href="{% url 'service_catalog:service_details' service.id %}">Cancel</a>
+                            <a class="btn btn-light" href="{% url 'service_catalog:service_details' service.id %}">Cancel</a>
                         </form>
                     </div>
                 </div><!-- end container fluid -->
             </div>
         </div>
-    </div>
+    </main>
 {% endblock %}
