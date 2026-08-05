@@ -47,6 +47,13 @@ def required(name):
         raise SystemExit(f"{name} is not set: the coverage backfill session cannot be created")
 
 
+def set_output(name, value):
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a") as handle:
+            handle.write(f"{name}={value}\n")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Print the request instead of sending it")
@@ -88,7 +95,11 @@ def main():
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
-            session = json.loads(response.read())
+            body = response.read()
+        # from here on a session exists, so say so before anything else can fail: the workflow uses this
+        # to decide whether the PR has already had its one backfill session
+        set_output("session_created", "true")
+        session = json.loads(body)
         session_url = session.get("url") or f"https://app.devin.ai/sessions/{session['session_id']}"
     except urllib.error.HTTPError as error:
         print(f"Failed to create Devin session: HTTP {error.code} {error.read().decode()}", file=sys.stderr)
@@ -96,15 +107,13 @@ def main():
     except (urllib.error.URLError, TimeoutError) as error:
         print(f"Failed to reach the Devin API: {error}", file=sys.stderr)
         return 1
-    except (json.JSONDecodeError, KeyError) as error:
-        print(f"Unexpected response from the Devin API: {error}", file=sys.stderr)
+    except (json.JSONDecodeError, KeyError, AttributeError, TypeError) as error:
+        print(f"Unexpected response from the Devin API: {type(error).__name__}: {error}", file=sys.stderr)
+        print(body[:2000].decode(errors="replace"), file=sys.stderr)
         return 1
 
     print(f"Created Devin session: {session_url}")
-    github_output = os.environ.get("GITHUB_OUTPUT")
-    if github_output:
-        with open(github_output, "a") as handle:
-            handle.write(f"session_url={session_url}\n")
+    set_output("session_url", session_url)
     return 0
 
 

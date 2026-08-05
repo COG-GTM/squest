@@ -121,7 +121,7 @@ jobs:
 
       - name: Spawn a Devin session to backfill the missing tests
         id: spawn-session
-        # only once per PR: the label added below stops the session's own push from spawning another.
+        # only once per PR: the label added afterwards stops the session's own push from spawning another.
         # fork PRs are excluded: they get no secrets and their head branch is not in this repository
         if: >-
           steps.patch-coverage.outputs.status == '1' &&
@@ -138,9 +138,11 @@ jobs:
           python scripts/spawn_coverage_session.py
 
       - name: Label the PR as backfilled
-        # runs on any spawn attempt: a session may exist even when the step failed afterwards, and the
-        # label is the only thing stopping the next push from spawning a second one
-        if: always() && steps.spawn-session.conclusion != 'skipped'
+        # keyed on a session actually existing, not on the step succeeding: the script reports
+        # session_created as soon as the API accepts the request, so a session that is created but not
+        # reported still gets the label (it is the only thing stopping the next push from spawning a
+        # second one), while a call that never created anything leaves the PR eligible to retry
+        if: always() && steps.spawn-session.outputs.session_created == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -149,7 +151,8 @@ jobs:
           gh pr edit "$PR_NUMBER" --add-label "$COVERAGE_BACKFILL_LABEL"
 
       - name: Comment the spawned session on the PR
-        if: steps.spawn-session.outcome == 'success' && steps.spawn-session.outputs.session_url != ''
+        # always(): a failure to label must not swallow the session link
+        if: always() && steps.spawn-session.outputs.session_url != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
