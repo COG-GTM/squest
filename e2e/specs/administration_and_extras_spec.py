@@ -362,7 +362,7 @@ def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
     expect(admin_page.locator(".card", has_text="Content")).to_contain_text("Please clean up your instances")
 
     edited_title = _unique("Your quota is full")
-    admin_page.locator("a[title='Edit']").first.click()
+    admin_page.locator("a[href$='/edit/']").click()
     admin_page.fill("input[name='email_title']", edited_title)
     submit_form(admin_page)
     expect_no_form_error(admin_page)
