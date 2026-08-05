@@ -54,10 +54,10 @@ def _select_option_containing(page: Page, field: str, text: str) -> str:
     return labels[0]
 
 
-def _add_tower_server(page: Page, base_url: str) -> str:
+def _add_tower_server(page: Page) -> str:
     """Adds a server backed by the stub and returns its name. The host is unique in the database."""
     name = _unique("Operator AAP")
-    page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    goto_sidebar_entry(page, "RHAAP/AWX")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='name']", name)
     page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
@@ -103,9 +103,9 @@ def _fill_json(page: Page, field: str, value: str) -> None:
     page.fill(f"textarea[name='{field}']", value)
 
 
-def test_operator_reaches_the_job_template_detail_of_their_own_server(admin_page, base_url):
+def test_operator_reaches_the_job_template_detail_of_their_own_server(admin_page):
     """The synced templates are browsable: list of the server, then the detail of one of them."""
-    tower_name = _add_tower_server(admin_page, base_url)
+    tower_name = _add_tower_server(admin_page)
     _open_job_template_list(admin_page, tower_name)
 
     job_template_table = admin_page.locator("#job_template_table")
@@ -120,8 +120,8 @@ def test_operator_reaches_the_job_template_detail_of_their_own_server(admin_page
     expect(admin_page.locator("#data")).to_contain_text("ask_variables_on_launch")
 
 
-def test_compliancy_page_reports_a_compliant_job_template_as_a_success(admin_page, base_url):
-    tower_name = _add_tower_server(admin_page, base_url)
+def test_compliancy_page_reports_a_compliant_job_template_as_a_success(admin_page):
+    tower_name = _add_tower_server(admin_page)
     _open_job_template_list(admin_page, tower_name)
 
     row = _table_row(admin_page, COMPLIANT_JOB_TEMPLATE)
@@ -133,9 +133,9 @@ def test_compliancy_page_reports_a_compliant_job_template_as_a_success(admin_pag
     expect(card.locator(".card-header")).to_have_class(re.compile(r"bg-success"))
 
 
-def test_compliancy_page_warns_about_prompt_on_launch_for_a_non_compliant_job_template(admin_page, base_url):
+def test_compliancy_page_warns_about_prompt_on_launch_for_a_non_compliant_job_template(admin_page):
     """The flow an operator walks to find out why a template cannot be used by Squest."""
-    tower_name = _add_tower_server(admin_page, base_url)
+    tower_name = _add_tower_server(admin_page)
     _open_job_template_list(admin_page, tower_name)
 
     row = _table_row(admin_page, NON_COMPLIANT_JOB_TEMPLATE)
@@ -149,8 +149,8 @@ def test_compliancy_page_warns_about_prompt_on_launch_for_a_non_compliant_job_te
     expect(card.locator(".card-body")).to_contain_text("ask_variables_on_launch")
 
 
-def test_operator_renames_an_aap_server(admin_page, base_url):
-    tower_name = _add_tower_server(admin_page, base_url)
+def test_operator_renames_an_aap_server(admin_page):
+    tower_name = _add_tower_server(admin_page)
     renamed = _unique("Renamed AAP")
 
     _row_action(admin_page, tower_name, "Edit").click()
@@ -162,9 +162,9 @@ def test_operator_renames_an_aap_server(admin_page, base_url):
     expect_table_does_not_contain(admin_page, tower_name)
 
 
-def test_operator_updates_the_token_of_an_aap_server(admin_page, base_url):
+def test_operator_updates_the_token_of_an_aap_server(admin_page):
     """The token is write only: the edit page sends the operator to a dedicated form for it."""
-    tower_name = _add_tower_server(admin_page, base_url)
+    tower_name = _add_tower_server(admin_page)
 
     _row_action(admin_page, tower_name, "Edit").click()
     expect(admin_page.locator("input[name='token']")).to_have_count(0)
@@ -178,9 +178,9 @@ def test_operator_updates_the_token_of_an_aap_server(admin_page, base_url):
     expect(_table_row(admin_page, tower_name)).to_have_count(1)
 
 
-def test_operator_is_told_when_the_aap_token_is_refused(admin_page, base_url):
+def test_operator_is_told_when_the_aap_token_is_refused(admin_page):
     name = _unique("Rejected AAP")
-    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    goto_sidebar_entry(admin_page, "RHAAP/AWX")
     admin_page.get_by_role("link", name="Add").click()
     admin_page.fill("input[name='name']", name)
     admin_page.fill("input[name='host']", f"https://{uuid.uuid4().hex[:8]}.aap.stub.local")
@@ -188,13 +188,13 @@ def test_operator_is_told_when_the_aap_token_is_refused(admin_page, base_url):
     submit_form(admin_page)
 
     expect_form_error(admin_page, "Fail to authenticate with provided token")
-    admin_page.goto(f"{base_url}{NAV_MAP['Administration']['RHAAP/AWX']}")
+    goto_sidebar_entry(admin_page, "RHAAP/AWX")
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
     expect_table_does_not_contain(admin_page, name)
 
 
-def test_operator_deletes_an_aap_server(admin_page, base_url):
-    tower_name = _add_tower_server(admin_page, base_url)
+def test_operator_deletes_an_aap_server(admin_page):
+    tower_name = _add_tower_server(admin_page)
 
     _delete_row(admin_page, tower_name)
 
@@ -202,10 +202,10 @@ def test_operator_deletes_an_aap_server(admin_page, base_url):
     expect_table_does_not_contain(admin_page, tower_name)
 
 
-def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, base_url, scoped_user_page):
+def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, scoped_user_page):
     title = _unique("Maintenance window")
     message = f"The platform is read only during {title}"
-    _create_announcement(admin_page, base_url, title, message)
+    _create_announcement(admin_page, title, message)
 
     expect(_table_row(admin_page, title)).to_have_count(1)
 
@@ -216,9 +216,9 @@ def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, base
     expect(announcement).to_contain_text(message)
 
 
-def test_announcement_can_be_edited_and_deleted(admin_page, base_url):
+def test_announcement_can_be_edited_and_deleted(admin_page):
     title = _unique("Draft announcement")
-    _create_announcement(admin_page, base_url, title, "First wording")
+    _create_announcement(admin_page, title, "First wording")
 
     edited = _unique("Edited announcement")
     _row_action(admin_page, title, "Edit").click()
@@ -236,7 +236,7 @@ def test_announcement_can_be_edited_and_deleted(admin_page, base_url):
     expect_table_does_not_contain(admin_page, edited)
 
 
-def _create_announcement(page: Page, base_url: str, title: str, message: str) -> None:
+def _create_announcement(page: Page, title: str, message: str) -> None:
     """Creates an announcement that is live right now, so a user sees it on the home page."""
     now = datetime.now()
     goto_sidebar_entry(page, "Announcements")
@@ -250,7 +250,7 @@ def _create_announcement(page: Page, base_url: str, title: str, message: str) ->
     expect_no_form_error(page)
 
 
-def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_page, base_url, scoped_user_page):
+def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_page, scoped_user_page):
     """A custom link is configured by an operator and consumed by a user on their own instance."""
     name = _unique("Runbook")
     text = _unique("Open runbook")
@@ -280,7 +280,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     expect(scoped_user_page.locator(".btn-toolbar")).not_to_contain_text(text)
 
 
-def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
+def test_request_hook_is_created_listed_edited_and_deleted(admin_page):
     """Only the configuration surface: firing a hook needs a celery worker, which the suite has not."""
     name = _unique("On accepted")
     goto_sidebar_entry(admin_page, "Request hook")
@@ -310,7 +310,7 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page, base_url)
     expect(admin_page.locator("body")).not_to_contain_text(name)
 
 
-def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url):
+def test_instance_hook_is_created_listed_edited_and_deleted(admin_page):
     name = _unique("On available")
     goto_sidebar_entry(admin_page, "Instance hook")
     admin_page.get_by_role("link", name="Add").click()
@@ -341,7 +341,7 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page, base_url
     expect(admin_page.locator("body")).not_to_contain_text(renamed)
 
 
-def _create_email_template(page: Page, base_url: str, name: str, title: str, content: str) -> None:
+def _create_email_template(page: Page, name: str, title: str, content: str) -> None:
     goto_sidebar_entry(page, "Emails")
     page.get_by_role("link", name="Add").click()
     page.fill("input[name='name']", name)
@@ -352,10 +352,10 @@ def _create_email_template(page: Page, base_url: str, name: str, title: str, con
     goto_sidebar_entry(page, "Emails")
 
 
-def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
+def test_email_template_is_listed_previewed_and_edited(admin_page):
     name = _unique("Quota warning")
     title = _unique("Your quota is almost full")
-    _create_email_template(admin_page, base_url, name, title, "<p>Please clean up your instances</p>")
+    _create_email_template(admin_page, name, title, "<p>Please clean up your instances</p>")
 
     expect(_table_row(admin_page, name)).to_have_count(1)
     _table_row(admin_page, name).get_by_role("link", name=name).click()
@@ -372,10 +372,10 @@ def test_email_template_is_listed_previewed_and_edited(admin_page, base_url):
     expect(admin_page.locator("body")).to_contain_text(edited_title)
 
 
-def test_admin_sends_an_email_from_a_template(admin_page, base_url):
+def test_admin_sends_an_email_from_a_template(admin_page):
     """Email notifications are off in the suite, so the send path must go through without a SMTP server."""
     name = _unique("Welcome")
-    _create_email_template(admin_page, base_url, name, _unique("Welcome to Squest"), "<p>Hello</p>")
+    _create_email_template(admin_page, name, _unique("Welcome to Squest"), "<p>Hello</p>")
 
     _table_row(admin_page, name).get_by_role("link", name=name).click()
     admin_page.get_by_role("link", name="Send email").click()
