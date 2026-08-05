@@ -169,6 +169,20 @@ def _quota_row(page, attribute):
     )
 
 
+def _quota_limit_text(page, attribute, scope=None):
+    rows = _quota_row(page, attribute)
+    if scope is not None:
+        rows = rows.filter(has=page.get_by_role("link", name=scope, exact=True))
+    expect(rows).to_have_count(1)
+    row = rows.first
+    table = row.locator("xpath=ancestor::table")
+    headers = [text.strip().casefold() for text in table.locator("thead th").all_inner_texts()]
+    limit_index = headers.index("limit")
+    cells = row.locator("td")
+    expect(cells).to_have_count(len(headers))
+    return cells.nth(limit_index).inner_text().strip()
+
+
 # --- attribute definitions ---------------------------------------------------------------------
 
 
@@ -374,14 +388,14 @@ def test_the_quota_list_shows_the_seeded_limit_of_every_scope(admin_page):
         has=admin_page.get_by_role("link", name="Memory", exact=True)
     )
     expect(platform_engineering).to_have_count(1)
-    expect(platform_engineering).to_contain_text("512")
+    assert _quota_limit_text(admin_page, "Memory", "Platform Engineering") == "512"
     sre = table_rows(admin_page).filter(
         has=admin_page.get_by_role("link", name="Platform Engineering - SRE", exact=True)
     ).filter(
         has=admin_page.get_by_role("link", name="Memory", exact=True)
     )
     expect(sre).to_have_count(1)
-    expect(sre).to_contain_text("128")
+    assert _quota_limit_text(admin_page, "Memory", "Platform Engineering - SRE") == "128"
 
 
 def test_admin_changes_the_quota_limit_of_a_team(admin_page):
@@ -394,7 +408,7 @@ def test_admin_changes_the_quota_limit_of_a_team(admin_page):
     memory_field.fill(str(new_limit))
     submit_form(admin_page, "Update")
 
-    expect(_quota_row(admin_page, "Memory")).to_contain_text(str(new_limit))
+    assert _quota_limit_text(admin_page, "Memory") == str(new_limit)
 
 
 def test_the_quota_of_a_scope_shows_what_its_instances_consume(admin_page):
@@ -416,7 +430,7 @@ def test_the_quota_of_a_scope_shows_what_its_instances_consume(admin_page):
 def test_scoped_user_reads_the_quota_of_his_scope_without_being_able_to_change_it(scoped_user_page):
     _goto_scope_quotas(scoped_user_page, "Organization", "Platform Engineering")
 
-    expect(_quota_row(scoped_user_page, SEEDED_ATTRIBUTE)).to_contain_text("128")
+    assert _quota_limit_text(scoped_user_page, SEEDED_ATTRIBUTE) == "128"
     expect(scoped_user_page.get_by_role("link", name="Set quotas")).to_have_count(0)
 
 
