@@ -6,6 +6,12 @@ function reset_resource_group_attributes() {
     }
 }
 
+function refresh_resource_group_attributes(select) {
+    if ($.fn.selectpicker) {
+        select.selectpicker('refresh');
+    }
+}
+
 function load_resource_group_attributes(target_resource_group_id){
     reset_resource_group_attributes();
     if (!target_resource_group_id) {
@@ -21,7 +27,8 @@ function load_resource_group_attributes(target_resource_group_id){
             'target_resource_group_id': target_resource_group_id
         },
         success: function (data) {
-            $("#id_consume_from_attribute_definition").html(data).selectpicker('refresh');
+            const select = $("#id_consume_from_attribute_definition").html(data);
+            refresh_resource_group_attributes(select);
         },
         error: function(){
             console.log("Error during ajax call 'load_resource_group_attributes'");
