@@ -7,11 +7,11 @@ map_dict_request_state = {
     RequestState.ON_HOLD: "warning",
     RequestState.SUBMITTED: "info",
     RequestState.REJECTED: "dark",
-    RequestState.PROCESSING: "orange",
+    RequestState.PROCESSING: "warning",
     RequestState.COMPLETE: "success",
     RequestState.FAILED: "danger",
     RequestState.CANCELED: "secondary",
-    RequestState.ARCHIVED: "black"
+    RequestState.ARCHIVED: "secondary"
 }
 
 map_dict_instance_state = {
@@ -25,7 +25,7 @@ map_dict_instance_state = {
     InstanceState.UPDATE_FAILED: "warning",
     InstanceState.DELETED: "danger",
     InstanceState.ARCHIVED: "dark",
-    InstanceState.ABORTED: "gray_dark",
+    InstanceState.ABORTED: "secondary",
 }
 
 map_dict_step_state = {
@@ -59,21 +59,21 @@ map_class_to_color = {
 }
 
 random_color = {
-    "blue": "#007bff",
+    "blue": "#0d6efd",
     "indigo": "#6610f2",
     "purple": "#6f42c1",
-    "pink": "#e83e8c",
+    "pink": "#d63384",
     "red": "#dc3545",
     "orange": "#fd7e14",
     "yellow": "#ffc107",
-    "green": "#28a745",
+    "green": "#198754",
     "teal": "#20c997",
-    "cyan": "#17a2b8",
+    "cyan": "#0dcaf0",
     "gray": "#6c757d",
-    "primary": "#007bff",
+    "primary": "#0d6efd",
     "secondary": "#6c757d",
-    "success": "#28a745",
-    "info": "#17a2b8",
+    "success": "#198754",
+    "info": "#0dcaf0",
     "warning": "#ffc107",
     "danger": "#dc3545",
     "light": "#f8f9fa"
