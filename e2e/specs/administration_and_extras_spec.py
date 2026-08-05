@@ -85,8 +85,13 @@ def _wait_for_list_settled(page: Page) -> None:
         table.wait_for(state="attached")
 
 
+def _pagination(page: Page):
+    """Squest's table template renders one pagination block per page."""
+    return page.locator("ul.pagination").first
+
+
 def _next_page(page: Page):
-    return page.locator("ul.pagination li:not(.disabled) a").filter(has_text="next").first
+    return _pagination(page).locator("li:not(.disabled) a").filter(has_text="next").first
 
 
 def _table_row(page: Page, text: str):
@@ -106,12 +111,9 @@ def _table_row(page: Page, text: str):
     raise AssertionError("pagination exceeded 500 pages while searching for a row")
 
 
-def _expect_no_row(page: Page, text: str) -> None:
-    """Asserts no matching row exists on any page of a reused-DB list."""
-    first_link = page.locator("ul.pagination").get_by_role("link", name="1", exact=True)
-    if first_link.count():
-        with page.expect_navigation():
-            first_link.click()
+def _expect_no_row(page: Page, list_entry: str, text: str) -> None:
+    """Re-enters a list at page one, then asserts no matching row exists on any page."""
+    goto_sidebar_entry(page, list_entry)
     _wait_for_list_settled(page)
     row = helper_table_row(page, text)
     for _ in range(500):
@@ -193,7 +195,7 @@ def test_operator_renames_an_aap_server(admin_page):
 
     expect_no_form_error(admin_page)
     expect(_table_row(admin_page, renamed)).to_have_count(1)
-    _expect_no_row(admin_page, tower_name)
+    _expect_no_row(admin_page, "RHAAP/AWX", tower_name)
 
 
 def test_operator_updates_the_token_of_an_aap_server(admin_page):
@@ -224,7 +226,7 @@ def test_operator_is_told_when_the_aap_token_is_refused(admin_page):
     expect_form_error(admin_page, "Fail to authenticate with provided token")
     goto_sidebar_entry(admin_page, "RHAAP/AWX")
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, name)
+    _expect_no_row(admin_page, "RHAAP/AWX", name)
 
 
 def test_operator_deletes_an_aap_server(admin_page):
@@ -233,7 +235,7 @@ def test_operator_deletes_an_aap_server(admin_page):
     _delete_row(admin_page, tower_name)
 
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, tower_name)
+    _expect_no_row(admin_page, "RHAAP/AWX", tower_name)
 
 
 def test_announcement_of_an_admin_is_displayed_to_a_normal_user(admin_page, scoped_user_page):
@@ -267,7 +269,7 @@ def test_announcement_can_be_edited_and_deleted(admin_page):
     expect(admin_page.locator("body")).to_contain_text("Confirm deletion of")
     submit_form(admin_page, "Confirm")
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, edited)
+    _expect_no_row(admin_page, "Announcements", edited)
 
 
 def _create_announcement(page: Page, title: str, message: str) -> None:
@@ -312,7 +314,7 @@ def test_custom_link_of_a_service_shows_up_on_the_instance_detail_page(admin_pag
     goto_sidebar_entry(admin_page, "Custom links")
     _delete_row(admin_page, name)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, name)
+    _expect_no_row(admin_page, "Custom links", name)
 
     scoped_user_page.reload()
     expect(scoped_user_page.locator(".btn-toolbar")).not_to_contain_text(text)
@@ -344,7 +346,7 @@ def test_request_hook_is_created_listed_edited_and_deleted(admin_page):
 
     _delete_row(admin_page, name)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, name)
+    _expect_no_row(admin_page, "Request hook", name)
 
 
 def test_instance_hook_is_created_listed_edited_and_deleted(admin_page):
@@ -374,7 +376,7 @@ def test_instance_hook_is_created_listed_edited_and_deleted(admin_page):
 
     _delete_row(admin_page, renamed)
     expect(admin_page.get_by_role("link", name="Add")).to_be_visible()
-    _expect_no_row(admin_page, renamed)
+    _expect_no_row(admin_page, "Instance hook", renamed)
 
 
 def _create_email_template(page: Page, name: str, title: str, content: str) -> None:
