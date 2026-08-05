@@ -122,7 +122,7 @@ def request_comment(request, request_id):
     target_request = get_object_or_404(Request, id=request_id)
     if not request.user.has_perm('service_catalog.add_requestmessage', target_request):
         raise PermissionDenied
-    messages = RequestMessage.objects.filter(request=target_request)
+    comment_messages = RequestMessage.objects.filter(request=target_request)
     if request.method == "POST":
         form = RequestMessageForm(request.POST or None, request.FILES or None, sender=request.user,
                                   target_request=target_request)
@@ -134,7 +134,7 @@ def request_comment(request, request_id):
     context = {
         'form': form,
         'target_request': target_request,
-        'messages': messages,
+        'comment_messages': comment_messages,
         'breadcrumbs': [
             {'text': 'Requests', 'url': reverse('service_catalog:request_list')},
             {'text': target_request, 'url': target_request.get_absolute_url()},
