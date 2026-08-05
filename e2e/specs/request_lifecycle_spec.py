@@ -1,15 +1,18 @@
 import re
 from uuid import uuid4
 
-from playwright.sync_api import expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError, expect
 
 from e2e.helpers import (
+    SUBMIT_NAVIGATION_TIMEOUT_MS,
     expect_permission_denied,
     goto_sidebar_entry,
     submit_form,
     table_row,
     table_rows,
 )
+
+APPROVAL_SERVICE_NAME = "Kubernetes namespace"
 
 
 def _unique(prefix):
@@ -79,8 +82,11 @@ def _fill_comment_and_submit(page, text):
     textarea = page.locator("textarea").first
     expect(textarea).to_be_visible()
     textarea.fill(text)
-    page.locator("form button[type='submit']").first.click()
-    page.wait_for_load_state()
+    try:
+        with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
+            page.locator("form button[type='submit']").first.click()
+    except PlaywrightTimeoutError:
+        pass
 
 
 def _apply_filter(page, field):
@@ -88,10 +94,17 @@ def _apply_filter(page, field):
     submit = form.locator("button[type='submit']")
     expect(submit).to_have_count(1)
     if submit.is_visible():
-        submit.click()
+        try:
+            with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
+                submit.click()
+        except PlaywrightTimeoutError:
+            pass
     else:
-        form.evaluate("(form) => form.submit()")
-    page.wait_for_load_state()
+        try:
+            with page.expect_navigation(timeout=SUBMIT_NAVIGATION_TIMEOUT_MS):
+                form.evaluate("(form) => form.submit()")
+        except PlaywrightTimeoutError:
+            pass
 
 
 def test_admin_can_submit_and_inspect_a_fresh_request(admin_page):
@@ -140,7 +153,7 @@ def test_admin_accepts_and_processes_in_one_click(admin_page, scoped_user_page):
 
 
 def test_admin_accepts_then_processes_a_request(admin_page):
-    instance = _fresh_request(admin_page)
+    _fresh_request(admin_page)
     admin_page.get_by_role("link", name="Review").click()
     admin_page.get_by_role("button", name="Accept the request").click()
     _request_state(admin_page, "ACCEPTED")
@@ -151,7 +164,7 @@ def test_admin_accepts_then_processes_a_request(admin_page):
 
 
 def test_admin_rejects_a_request_with_a_comment(admin_page):
-    instance = _fresh_request(admin_page)
+    _fresh_request(admin_page)
     admin_page.get_by_role("link", name="Reject").click()
     _fill_comment_and_submit(admin_page, "Rejected by the lifecycle e2e test")
     _request_state(admin_page, "REJECTED")
@@ -159,8 +172,8 @@ def test_admin_rejects_a_request_with_a_comment(admin_page):
     expect(admin_page.locator("body")).to_contain_text("Rejected by the lifecycle e2e test")
 
 
-def test_admin_holds_then_resets_a_request(admin_page):
-    instance = _fresh_request(admin_page)
+def test_admin_puts_a_request_on_hold(admin_page):
+    _fresh_request(admin_page)
     admin_page.get_by_role("link", name="Ask info").click()
     _fill_comment_and_submit(admin_page, "Please provide more information")
     _request_state(admin_page, "ON_HOLD")
@@ -224,10 +237,9 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
         has=admin_page.locator("a").filter(has_text=re.compile(r"^COMPLETE$"))
     ).first
     expect(row).to_have_count(1)
-    href = row.locator("a[href*='/request/']").first.get_attribute("href")
-    assert href
-    request_link = href
-    admin_page.goto(href)
+    request_link = row.locator("a[href*='/request/']").first.get_attribute("href")
+    assert request_link
+    admin_page.goto(request_link)
     archive = admin_page.get_by_title("Archive")
     expect(archive).to_be_visible()
     archive.click()
@@ -248,6 +260,8 @@ def test_complete_request_can_be_archived_and_unarchived(admin_page):
 
 
 def test_scoped_user_cannot_see_marketing_request(admin_page, scoped_user_page):
+    own_instance = _unique("scope")
+    _submit_request(scoped_user_page, "Virtual machine", own_instance, "Platform Engineering")
     goto_sidebar_entry(admin_page, "Requests")
     instance_filter = admin_page.locator("[name='instance__name']")
     if not instance_filter.is_visible():
@@ -256,15 +270,17 @@ def test_scoped_user_cannot_see_marketing_request(admin_page, scoped_user_page):
     _apply_filter(admin_page, instance_filter)
     row = table_row(admin_page, "campaign-site")
     expect(row).to_have_count(1)
-    href = row.get_by_role("link").first.get_attribute("href")
+    href = row.locator("a[href*='/request/']").first.get_attribute("href")
     assert href
+    goto_sidebar_entry(scoped_user_page, "Requests")
+    expect(table_row(scoped_user_page, own_instance)).to_have_count(1)
     expect(table_row(scoped_user_page, "campaign-site")).to_have_count(0)
     response = scoped_user_page.goto(href)
     assert response.status == 403
     expect_permission_denied(scoped_user_page)
 
 
-def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as, service_name="Kubernetes namespace"):
+def _create_approval_role_and_grant_to_alice(admin_page):
     role_name = _unique("approval-role")
     goto_sidebar_entry(admin_page, "Role")
     admin_page.get_by_role("link", name="Add").click()
@@ -286,99 +302,101 @@ def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as, s
     admin_page.get_by_label("Roles").select_option(label=role_name, force=True)
     admin_page.get_by_label("Users").select_option(label="alice", force=True)
     submit_form(admin_page)
-
-    goto_sidebar_entry(admin_page, "Approval workflows")
-    admin_page.get_by_role("link", name="Add").click()
-    workflow_name = _unique("workflow")
-    admin_page.get_by_label("Name").fill(workflow_name)
-    admin_page.get_by_label("Operation").select_option(
-        label=f"Create {service_name.lower()} ({service_name})"
-    )
-    admin_page.get_by_label("Scopes").select_option(label="Platform Engineering - SRE", force=True)
-    admin_page.get_by_label("Enabled").check()
-    submit_form(admin_page)
-    admin_page.get_by_role("link", name="Add a step").click()
-    admin_page.get_by_label("Name").fill(_unique("step"))
-    submit_form(admin_page)
-    instance = _unique("approval")
-    _submit_request(scoped_user_page, service_name, instance, "Platform Engineering - SRE")
-    goto_sidebar_entry(admin_page, "Requests")
-    row = table_row(admin_page, instance)
-    expect(row).to_have_count(1)
-    detail = row.locator("a[href*='/request/']").first.get_attribute("href")
-    assert detail
-    alice = login_as("alice")
-    alice.goto(detail)
-    expect(alice.get_by_role("link", name="Review")).to_be_visible()
-    alice.get_by_role("link", name="Review").click()
-    alice.locator("form button[type='submit']").first.click()
-    _request_state(alice, "ACCEPTED")
-    goto_sidebar_entry(admin_page, "Approval workflows")
-    workflow_row = table_row(admin_page, workflow_name)
-    workflow_row.get_by_role("link").first.click()
-    admin_page.locator("a.btn-danger:not([href*='approval-step'])").click()
-    admin_page.get_by_role("button", name="Confirm").click()
+    return role_name
 
 
-def test_approval_workflow_two_steps(admin_page, scoped_user_page, login_as):
-    role_name = _unique("approval-role")
-    goto_sidebar_entry(admin_page, "Role")
-    admin_page.get_by_role("link", name="Add").click()
-    admin_page.get_by_label("Name").fill(role_name)
-    permissions = admin_page.get_by_label("Permissions")
-    approval_permission = permissions.locator("option").filter(
-        has_text=re.compile("approve.*reject.*approval", re.I)
-    ).first
-    permission_value = approval_permission.get_attribute("value")
-    assert permission_value
-    permissions.select_option(value=permission_value, force=True)
-    submit_form(admin_page)
-    goto_sidebar_entry(admin_page, "Organization")
-    organization_row = table_row(admin_page, "Platform Engineering")
-    organization_href = organization_row.get_by_role("link").first.get_attribute("href")
-    assert organization_href
-    admin_page.goto(organization_href)
-    admin_page.get_by_role("link", name="Add roles/users").click()
-    admin_page.get_by_label("Roles").select_option(label=role_name, force=True)
-    admin_page.get_by_label("Users").select_option(label="alice", force=True)
-    submit_form(admin_page)
+def _delete_approval_entities(admin_page, workflow_name, role_name):
+    if workflow_name:
+        try:
+            goto_sidebar_entry(admin_page, "Approval workflows")
+            workflow_row = table_row(admin_page, workflow_name)
+            if workflow_row.count():
+                workflow_row.get_by_role("link").first.click()
+                admin_page.locator("a.btn-danger:not([href*='approval-step'])").click()
+                admin_page.get_by_role("button", name="Confirm").click()
+        except Exception:
+            pass
+    if role_name:
+        try:
+            goto_sidebar_entry(admin_page, "Role")
+            role_row = table_row(admin_page, role_name)
+            if role_row.count():
+                role_row.get_by_role("link").first.click()
+                admin_page.locator("a.btn-danger").first.click()
+                admin_page.get_by_role("button", name="Confirm").click()
+        except Exception:
+            pass
 
-    goto_sidebar_entry(admin_page, "Approval workflows")
-    admin_page.get_by_role("link", name="Add").click()
-    workflow_name = _unique("workflow")
-    admin_page.get_by_label("Name").fill(workflow_name)
-    admin_page.get_by_label("Operation").select_option(
-        label="Create kubernetes namespace (Kubernetes namespace)"
-    )
-    admin_page.get_by_label("Scopes").select_option(label="Platform Engineering - SRE", force=True)
-    admin_page.get_by_label("Enabled").check()
-    submit_form(admin_page)
-    for _ in range(2):
+
+def test_approval_workflow_single_step(admin_page, scoped_user_page, login_as):
+    role_name = _create_approval_role_and_grant_to_alice(admin_page)
+    workflow_name = None
+    try:
+        goto_sidebar_entry(admin_page, "Approval workflows")
+        admin_page.get_by_role("link", name="Add").click()
+        workflow_name = _unique("workflow")
+        admin_page.get_by_label("Name").fill(workflow_name)
+        admin_page.get_by_label("Operation").select_option(
+            label=f"Create {APPROVAL_SERVICE_NAME.lower()} ({APPROVAL_SERVICE_NAME})"
+        )
+        admin_page.get_by_label("Scopes").select_option(label="Platform Engineering - SRE", force=True)
+        admin_page.get_by_label("Enabled").check()
+        submit_form(admin_page)
         admin_page.get_by_role("link", name="Add a step").click()
         admin_page.get_by_label("Name").fill(_unique("step"))
         submit_form(admin_page)
+        instance = _unique("approval")
+        _submit_request(scoped_user_page, APPROVAL_SERVICE_NAME, instance, "Platform Engineering - SRE")
+        goto_sidebar_entry(admin_page, "Requests")
+        row = table_row(admin_page, instance)
+        expect(row).to_have_count(1)
+        detail = row.locator("a[href*='/request/']").first.get_attribute("href")
+        assert detail
+        alice = login_as("alice")
+        alice.goto(detail)
+        expect(alice.get_by_role("link", name="Review")).to_be_visible()
+        alice.get_by_role("link", name="Review").click()
+        alice.locator("form button[type='submit']").first.click()
+        _request_state(alice, "ACCEPTED")
+    finally:
+        _delete_approval_entities(admin_page, workflow_name, role_name)
 
-    instance = _unique("approval-two-step")
-    _submit_request(scoped_user_page, "Kubernetes namespace", instance, "Platform Engineering - SRE")
-    goto_sidebar_entry(admin_page, "Requests")
-    row = table_row(admin_page, instance)
-    expect(row).to_have_count(1)
-    detail = row.locator("a[href*='/request/']").first.get_attribute("href")
-    assert detail
-    alice = login_as("alice")
-    alice.goto(detail)
-    expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_be_visible()
-    expect(alice.get_by_role("link", name="Review")).to_have_count(1)
-    alice.get_by_role("link", name="Review").click()
-    alice.locator("form button[type='submit']").first.click()
-    expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_have_count(0)
-    expect(alice.get_by_role("link", name="Review")).to_be_visible()
-    alice.get_by_role("link", name="Review").click()
-    alice.locator("form button[type='submit']").first.click()
-    _request_state(alice, "ACCEPTED")
+def test_approval_workflow_two_steps(admin_page, scoped_user_page, login_as):
+    role_name = _create_approval_role_and_grant_to_alice(admin_page)
+    workflow_name = None
+    try:
+        goto_sidebar_entry(admin_page, "Approval workflows")
+        admin_page.get_by_role("link", name="Add").click()
+        workflow_name = _unique("workflow")
+        admin_page.get_by_label("Name").fill(workflow_name)
+        admin_page.get_by_label("Operation").select_option(
+            label=f"Create {APPROVAL_SERVICE_NAME.lower()} ({APPROVAL_SERVICE_NAME})"
+        )
+        admin_page.get_by_label("Scopes").select_option(label="Platform Engineering - SRE", force=True)
+        admin_page.get_by_label("Enabled").check()
+        submit_form(admin_page)
+        for _ in range(2):
+            admin_page.get_by_role("link", name="Add a step").click()
+            admin_page.get_by_label("Name").fill(_unique("step"))
+            submit_form(admin_page)
 
-    goto_sidebar_entry(admin_page, "Approval workflows")
-    workflow_row = table_row(admin_page, workflow_name)
-    workflow_row.get_by_role("link").first.click()
-    admin_page.locator("a.btn-danger:not([href*='approval-step'])").click()
-    admin_page.get_by_role("button", name="Confirm").click()
+        instance = _unique("approval-two-step")
+        _submit_request(scoped_user_page, APPROVAL_SERVICE_NAME, instance, "Platform Engineering - SRE")
+        goto_sidebar_entry(admin_page, "Requests")
+        row = table_row(admin_page, instance)
+        expect(row).to_have_count(1)
+        detail = row.locator("a[href*='/request/']").first.get_attribute("href")
+        assert detail
+        alice = login_as("alice")
+        alice.goto(detail)
+        expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_be_visible()
+        expect(alice.get_by_role("link", name="Review")).to_have_count(1)
+        alice.get_by_role("link", name="Review").click()
+        alice.locator("form button[type='submit']").first.click()
+        expect(alice.get_by_text("Waiting for previous step to be accepted.")).to_have_count(0)
+        expect(alice.get_by_role("link", name="Review")).to_be_visible()
+        alice.get_by_role("link", name="Review").click()
+        alice.locator("form button[type='submit']").first.click()
+        _request_state(alice, "ACCEPTED")
+    finally:
+        _delete_approval_entities(admin_page, workflow_name, role_name)
