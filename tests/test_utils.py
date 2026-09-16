@@ -108,3 +108,14 @@ TextBefore ![Single picture on a line with text before and after](/notmedia/doc_
         context = {"random_key": {"name": "test"}}
         when_string = "instance.name == 'test'"
         self.assertFalse(AnsibleWhen.when_render(context, when_string))
+
+    def test_when_render_blocks_unsafe_expressions(self):
+        context = {"instance": {"name": "test"}}
+        unsafe_strings = [
+            "''.__class__.__mro__[1].__subclasses__()",
+            "cycler.__init__.__globals__['os'].popen('id').read()",
+            "instance.__class__.__base__",
+            "true %}{{ ''.__class__.__mro__ }}{% if true",
+        ]
+        for when_string in unsafe_strings:
+            self.assertFalse(AnsibleWhen.when_render(context, when_string))

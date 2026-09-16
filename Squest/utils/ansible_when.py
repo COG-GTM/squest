@@ -1,10 +1,14 @@
 import logging
 
-from jinja2 import Template, UndefinedError, TemplateSyntaxError
+from jinja2 import UndefinedError, TemplateSyntaxError
+from jinja2.exceptions import SecurityError
+from jinja2.sandbox import ImmutableSandboxedEnvironment
 
 logger = logging.getLogger(__name__)
 
+
 class AnsibleWhen(object):
+    _environment = ImmutableSandboxedEnvironment()
 
     @classmethod
     def when_render(cls, context, when_string):
@@ -12,13 +16,16 @@ class AnsibleWhen(object):
             return False
         template_string = "{% if " + when_string + " %}True{% else %}{% endif %}"
         try:
-            template = Template(template_string)
+            template = cls._environment.from_string(template_string)
         except TemplateSyntaxError:
             logger.warning(f"when_render error when templating: {context} with string '{when_string}'")
             return False
         try:
             template_rendered = template.render(context)
             return bool(template_rendered)
-        except UndefinedError:
+        except SecurityError:
+            logger.warning(f"when_render blocked unsafe expression: '{when_string}'")
+            return False
+        except (UndefinedError, TypeError, AttributeError, KeyError, ValueError):
             logger.warning(f"when_render error when templating: {context} with string '{when_string}'")
             return False
