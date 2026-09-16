@@ -116,6 +116,7 @@ TextBefore ![Single picture on a line with text before and after](/notmedia/doc_
             "cycler.__init__.__globals__['os'].popen('id').read()",
             "instance.__class__.__base__",
             "true %}{{ ''.__class__.__mro__ }}{% if true",
+            "1 / 0",
         ]
         for when_string in unsafe_strings:
             self.assertFalse(AnsibleWhen.when_render(context, when_string))

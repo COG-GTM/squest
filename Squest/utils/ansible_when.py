@@ -1,6 +1,6 @@
 import logging
 
-from jinja2 import UndefinedError, TemplateSyntaxError
+from jinja2 import TemplateSyntaxError
 from jinja2.exceptions import SecurityError
 from jinja2.sandbox import ImmutableSandboxedEnvironment
 
@@ -26,6 +26,6 @@ class AnsibleWhen(object):
         except SecurityError:
             logger.warning(f"when_render blocked unsafe expression: '{when_string}'")
             return False
-        except (UndefinedError, TypeError, AttributeError, KeyError, ValueError):
+        except Exception:
             logger.warning(f"when_render error when templating: {context} with string '{when_string}'")
             return False
