@@ -1,0 +1,60 @@
+// Squest runtime architecture on master (docker-compose.yml deployment).
+// Edit this file, then run ./render.sh to regenerate docs/images/architecture.{png,svg}.
+digraph squest {
+  graph [rankdir=TB, fontname="DejaVu Sans", fontsize=18, nodesep=0.45, ranksep=0.55, pad=0.3,
+         label="Squest architecture (docker-compose.yml deployment)", labelloc=t];
+  node  [shape=box, style="rounded,filled", fillcolor=white, fontname="DejaVu Sans", fontsize=16, margin="0.2,0.1"];
+  edge  [fontname="DejaVu Sans", fontsize=13, color="#555555"];
+
+  users [label="End users and admins\n(browser, API token)", shape=oval, fillcolor="#e8f4fd"];
+  idp   [label="LDAP / OIDC\n(optional login backends)", fillcolor="#f5f5f5"];
+  prom  [label="Prometheus\n(scrapes /metrics when\nMETRICS_ENABLED)", fillcolor="#f5f5f5"];
+  aap   [label="Red Hat AAP / AWX\njob templates, surveys, jobs", fillcolor="#fde9d9", penwidth=2];
+  smtp  [label="SMTP server\n(request / instance emails)", fillcolor="#f5f5f5"];
+
+  subgraph cluster_edge {
+    label="Edge"; style="rounded,dashed"; color="#888888"; fontsize=15;
+    tls   [label="caddy :443 (optional TLS)\ntls.docker-compose.yml"];
+    nginx [label="nginx :8080\nserves /static and /media"];
+    maint [label="maintenance\n(nginx static page)"];
+    {rank=same; nginx; maint;}
+  }
+
+  subgraph cluster_app {
+    label="Squest image (quay.io/hewlettpackardenterprise/squest)"; style=rounded; color="#1abc9c"; penwidth=2; fontsize=15;
+    django [label="django: gunicorn :8000 (Squest.wsgi)\nUI /ui/*, REST API /api/*, Swagger /swagger/\napps: service_catalog, resource_tracker_v2,\nprofiles (RBAC, quotas), monitoring", fillcolor="#e8f8f5"];
+    beat   [label="celery-beat\nDatabaseSchedulerWithCleanup\n(10 s job-status poll per request)", fillcolor="#e8f8f5"];
+    worker [label="celery-worker\ntowerserver_sync, check_tower_job_status_task,\nsend_email, perform_backup", fillcolor="#e8f8f5"];
+  }
+
+  subgraph cluster_data {
+    label="Stateful services"; style="rounded,dashed"; color="#888888"; fontsize=15;
+    redis  [label="Redis 6.2\nDjango cache (cachalot)", shape=cylinder, fillcolor="#fff8e1"];
+    db     [label="MariaDB 11 (default) or\nPostgreSQL (psql.docker-compose.yaml)\nmodels, Celery results, beat schedule", shape=cylinder, fillcolor="#fff8e1"];
+    mq     [label="RabbitMQ 3.13\nCelery broker (vhost squest)", shape=cylinder, fillcolor="#fff8e1"];
+    {rank=same; redis; db; mq;}
+  }
+
+  {rank=same; users; idp;}
+  {rank=same; aap; smtp;}
+
+  users -> tls [label="HTTPS"];
+  users -> nginx [label="HTTP", style=dashed];
+  tls -> nginx;
+  nginx -> maint [label="backup upstream", style=dashed];
+  nginx -> django [label="proxy"];
+  django -> idp [label="auth", style=dashed];
+  prom -> django [label="scrape", style=dashed];
+
+  django -> aap [label="launch job template\n(towerlib, on PROCESSING)", color="#c0504d", fontcolor="#c0504d", penwidth=1.6];
+  django -> beat [label="PeriodicTask per request", style=dashed];
+  beat -> worker [label="due tasks via broker", style=dashed];
+  worker -> aap [label="sync templates and surveys,\npoll job status", color="#c0504d", fontcolor="#c0504d", penwidth=1.6];
+  worker -> smtp;
+
+  django -> redis;
+  django -> mq [label="enqueue"];
+  worker -> mq [label="consume", dir=back];
+  worker -> db;
+  django -> db;
+}
