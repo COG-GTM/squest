@@ -22,7 +22,7 @@ class RequestFilterGeneric(SquestFilter):
 
     instance__quota_scope = ModelMultipleChoiceFilter(
         label="Quota scope",
-        queryset=Scope.objects.all(),
+        queryset=Scope.objects.select_related("organization", "team__org"),
         widget=SelectMultiple(attrs={'data-live-search': "true"}))
 
     operation__type = MultipleChoiceFilter(
