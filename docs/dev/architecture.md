@@ -51,7 +51,7 @@ Django, Celery and backup).
 |---|---|
 | `/ui/` | Home dashboard (`Squest/views.py`) |
 | `/ui/service-catalog/`, `/api/service-catalog/` | `service_catalog` views and REST API |
-| `/ui/resource-tracker/`, `/api/resource-tracker/` | `resource_tracker_v2` views and REST API |
+| `/ui/resource-tracker/`, `/api/resource-tracker/` | `resource_tracker_v2` views and REST API (the UI has no page at the bare prefix; start at `/ui/resource-tracker/resource-group/`) |
 | `/ui/profiles/`, `/api/profiles/` | `profiles` views and REST API |
 | `/api/tasks/<id>/` | Celery task result |
 | `/swagger/`, `/redoc/`, `/swagger.json` | OpenAPI schema from `drf-yasg` |
