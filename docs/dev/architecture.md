@@ -93,7 +93,7 @@ or link resources.
 
 | Command | Use |
 |---|---|
-| `insert_default_data` | Creates the default roles, permissions and global settings. Runs on every container start. |
+| `insert_default_data` | Creates the users listed in `default_data.yml` (the `admin` superuser) if they do not exist. Runs on every container start; default roles and permissions come from the migrations. |
 | `insert_demo_data` | Seeds a demo database (users `alice`, `bob`, `carol`, a placeholder AAP server, services, instances, requests, support tickets and resource groups). Needs no reachable AAP/AWX. Refuses to run unless `DEBUG` is on or `--force` is passed, because each demo user's password is their username. |
 | `insert_testing_data` | Larger random data set for manual testing. |
 | `martor_cleanup` | Same cleanup as `task_cleanup_ghost_docs_images`. |
