@@ -30,7 +30,7 @@ class InstanceFilterGeneric(SquestFilter):
         fields = ['id', 'name', 'requester', 'service', 'state', 'quota_scope']
 
     state = MultipleChoiceFilter(choices=InstanceState.choices)
-    quota_scope = ModelMultipleChoiceFilter(queryset=Scope.objects.all())
+    quota_scope = ModelMultipleChoiceFilter(queryset=Scope.objects.select_related("organization", "team__org"))
     service = MultipleChoiceFilter(choices=Service.objects.values_list("id", "name"))
     requester = MultipleChoiceFilter(choices=User.objects.values_list("id", "username"))
     no_requesters = BooleanFilter(method='no_requester', label="No requester", widget=CheckboxInput())
